@@ -10,6 +10,10 @@ from pathlib import Path
 import cvutils
 import pyutils
 
+__all__ = [
+    "DataPackage",
+]
+
 
 # 面向labelme软件的标注数据的类
 # 重要的数据成员包括图像路径,图像,标注路径,标注内容
@@ -29,7 +33,7 @@ class DataPackage:
             imageWidth=shape[1],
         )
 
-    # 通过图像路径生成对象，其中标注路径与图像路径一致，仅替换后缀
+    # 通过图像路径生成对象，其中标注路径与图像路径一致，仅替换后缀，仅适用与图像与标注放置在同一文件夹下的情况，若标注文件不存在，生成默认的标注内容
     @classmethod
     def create_from_img_path(cls, img_path, cat_idx=-1):
         img = cvutils.imread(img_path)
@@ -42,6 +46,7 @@ class DataPackage:
             )
         return cls(img_path, img, label_path, label, cat_idx)
 
+    # 通过标注路径生成对象，其中图像路径通过标注内容获取
     @classmethod
     def create_from_label_path(cls, label_path, cat_idx=-1):
         label = pyutils.load_json(label_path)
@@ -52,7 +57,7 @@ class DataPackage:
     # 初始化方法,由用户显式提供数据成员
     def __init__(self, img_path, img, label_path, label, cat_idx=-1):
         self.img_path = img_path
-        self.img = img.clone()
+        self.img = img.copy()
         self.label_path = label_path
         self.label = copy.deepcopy(label)
         self.rectangle_items = []
@@ -72,8 +77,8 @@ class DataPackage:
         self,
         tl_x,
         tl_y,
-        br_x,
-        br_y,
+        width,
+        height,
         img_path=None,
         label_itself=False,
         cat_idx=-1,
@@ -82,22 +87,14 @@ class DataPackage:
         shape_type="rectangle",
         flags=None,
     ):
-        rect = cvutils.RectROI.create_from_xywh(
-            tl_x, tl_y, br_x - tl_x + 1, br_y - tl_y + 1
-        )
+        rect = cvutils.RectROI.create_from_xywh(tl_x, tl_y, width, height)
         label_path = (
             str(Path(img_path).with_suffix(".json")) if img_path is not None else None
         )
         img = rect.crop(self.img)
-        label_ = dict(
-            # todo: remove the hard magic numbers below
-            version="4.5.7",
-            flags={},
-            shapes=[],
-            imagePath=str(Path(img_path).name) if img_path is not None else None,
-            imageData=None,
-            imageHeight=img.shape[0],
-            imageWidth=img.shape[1],
+        label_ = DataPackage.gen_default_label(
+            img_path=str(Path(img_path).name) if img_path is not None else None,
+            shape=(img.shape[0], img.shape[1]),
         )
 
         for shapes_item in self.label["shapes"]:
