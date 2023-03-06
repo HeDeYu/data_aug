@@ -73,6 +73,7 @@ class DataPackage:
                     )
                 )
 
+    # 给定左上角坐标与宽高，裁剪图像与标注
     def crop(
         self,
         tl_x,
@@ -80,12 +81,7 @@ class DataPackage:
         width,
         height,
         img_path=None,
-        label_itself=False,
         cat_idx=-1,
-        label=None,
-        group_id=None,
-        shape_type="rectangle",
-        flags=None,
     ):
         rect = cvutils.RectROI.create_from_xywh(tl_x, tl_y, width, height)
         label_path = (
@@ -126,20 +122,44 @@ class DataPackage:
         br_x, br_y = round(rectangle_item["points"][1][0]), round(
             rectangle_item["points"][1][1]
         )
-        # width, height = round(rectangle_item["points"][1][0]) - round(rectangle_item["points"][0][0]), round(rectangle_item["points"][1][1]) - round(rectangle_item["points"][0][1])
+        # width, height = round(rectangle_item["points"][1][0]) - round(
+        #     rectangle_item["points"][0][0]
+        # ), round(rectangle_item["points"][1][1]) - round(rectangle_item["points"][0][1])
+        width = br_x - tl_x
+        height = br_y - tl_y
         return self.crop(
             tl_x,
             tl_y,
-            br_x,
-            br_y,
+            width,
+            height,
             img_path=img_path,
-            label_itself=True,
             cat_idx=cat_idx,
-            label=rectangle_item["label"],
-            group_id=rectangle_item["group_id"],
-            flags=rectangle_item["flags"],
-            shape_type="rectangle",
         )
+
+    def crop_rectangle_items(self, dst_dir, include_labels=None, exclude_labels=None):
+        for idx, item in enumerate(self.label["shapes"]):
+            # 若给定了有效标注名字列表，则不考虑不在有效标注名字列表中的标注
+            if include_labels is not None and item["label"] not in include_labels:
+                continue
+            # 若给定了无效标注名字列表，则不考虑无效标注名字列表中的标注
+            if exclude_labels is not None and item["label"] in exclude_labels:
+                continue
+
+            if item["shape_type"] == "rectangle":
+                pt = [*item["points"][0], *item["points"][1]]
+                pt_name = [round(pt_) for pt_ in pt]
+                # 以裁剪的左上右下坐标追加到源的图像名字中作为裁剪图像的名字
+                saved_img_path = Path(dst_dir) / Path(
+                    self.img_path.stem + "_" + "_".join([str(pt_) for pt_ in pt_name])
+                ).with_suffix(".bmp")
+
+                cropped_dp = self.crop_rectangle_item(
+                    item, img_path=str(saved_img_path)
+                )
+
+                cropped_dp.save_img()
+
+                cropped_dp.save_label()
 
     def visualize(self):
         img = self.img.copy()
