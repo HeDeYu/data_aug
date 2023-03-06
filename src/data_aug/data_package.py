@@ -105,7 +105,7 @@ class DataPackage:
                 br_x_, br_y_ = round(shapes_item["points"][1][0]), round(
                     shapes_item["points"][1][1]
                 )
-
+                # 若源标注rect完整落入目标图像中，则保留其标注到目标标注中（带取整操作）
                 if rect.contain([tl_x_, tl_y_]) and rect.contain([br_x_, br_y_]):
                     tl = [tl_x_ - tl_x, tl_y_ - tl_y]
                     br = [br_x_ - tl_x, br_y_ - tl_y]
