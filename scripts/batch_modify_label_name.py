@@ -70,17 +70,17 @@ def remap(label_item):
     label = label_item["label"]
     if label.startswith("8P4R"):
         if label.endswith("body"):
-            label_item["label"] = "8P4R"
+            label_item["label"] = "8P4R_body"
         elif label.endswith("with_pad"):
             label_item["label"] = "8P4R_with_pad"
     elif label.startswith("SOT"):
         if label.endswith("body"):
-            label_item["label"] = "SOT"
+            label_item["label"] = "SOT_body"
         elif label.endswith("with_pad"):
             label_item["label"] = "SOT_with_pad"
     elif label.startswith("LED"):
         if label.endswith("body"):
-            label_item["label"] = "LED"
+            label_item["label"] = "LED_body"
         elif label.endswith("with_pad"):
             label_item["label"] = "LED_with_pad"
     elif label.startswith("R"):
@@ -93,6 +93,8 @@ def remap(label_item):
             label_item["label"] = "C_with_pad"
         else:
             label_item["label"] = "C_body"
+    elif label == "land":
+        label_item["label"] = "Land"
 
 
 # def relabel(label_item, label_new):
@@ -106,8 +108,8 @@ def remap(label_item):
 
 
 if __name__ == "__main__":
-    src_json_dir = r"D:\data\stb\stb_rc_15um_without_01005"
-    output_dir = r"..\tests\test_output\modify_label_name"
+    src_json_dir = r"D:\data\raw\sot_stb"
+    output_dir = r"D:\data\raw\temp"
 
     batch_modify_label_name(
         src_json_dir=src_json_dir,
