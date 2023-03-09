@@ -4,6 +4,8 @@
 # @Time     :2022/11/29 17:15
 
 import copy
+import itertools
+import random
 from pathlib import Path
 
 import cv2
@@ -638,6 +640,278 @@ class DataPackage:
                 new_pt = np.matmul(M, np.array([pt[0], pt[1], 1])).tolist()[:2]
                 new_label_item["points"].append([new_pt[0], new_pt[1]])
         return new_label_item
+
+    def paste_to(self, dst_data_package, tl_x, tl_y):
+        assert isinstance(dst_data_package, DataPackage)
+        num_channels = len(self.img.shape)
+        img = dst_data_package.img
+        label = dst_data_package.label
+        x = tl_x
+        y = tl_y
+        if num_channels == 1:
+            img[y : y + self.img.shape[0], x : x + self.img.shape[1]] = self.img.copy()
+        elif num_channels == 3:
+            img[
+                y : y + self.img.shape[0], x : x + self.img.shape[1], :
+            ] = self.img.copy()
+        new_label = copy.deepcopy(label)
+        for label_item in self.label_items:
+            new_label["shapes"].append(self.translate_label_item(label_item, x, y))
+        return DataPackage(
+            img_path=dst_data_package.img_path,
+            img=img,
+            label_path=dst_data_package.label_path,
+            label=new_label,
+        )
+
+    def paste(self, dst_data_package, tl_x, tl_y):
+        self.paste_to(dst_data_package, tl_x, tl_y)
+
+    def paste_by(self, src_data_package, tl_x, tl_y, in_place=False):
+        """
+        将源对象粘贴到本对象上，不进行label item重叠冲突处理，不进行越界处理，返回新创建的DataPackage对象或执行对象本身。
+        Args:
+            src_data_package: 源对象
+            tl_x: 源对象粘贴到执行对象时的左上点x坐标
+            tl_y: 源对象粘贴到执行对象时的左上点y坐标
+            in_place: 是否原地操作，默认为False
+
+        Returns:
+
+        """
+        assert isinstance(src_data_package, DataPackage)
+        paste_height, paste_width = src_data_package.img.shape[:2]
+
+        if in_place:
+            ret = self
+        else:
+            ret = self.copy()
+
+        ret.img[
+            tl_y : tl_y + paste_height, tl_x : tl_x + paste_width, :
+        ] = src_data_package.img.copy()
+        for label_item_to_append in src_data_package.label_items:
+            ret.label_items.append(
+                ret.translate_label_item(label_item_to_append, tl_x, tl_y)
+            )
+
+        return ret
+
+    def paste_by_iter(
+        self,
+        src_data_package_iter,
+        num_to_paste=1,
+        allow_overlap=False,
+        num_max_try=1,
+        overlap_margin=0,
+        in_place=False,
+    ):
+        """
+        给定源对象迭代器，粘贴次数，是否允许重叠，不允许重叠时单个源对象的最大尝试粘贴次数，判断是否重合时的余量，将源对象粘贴到执行对象，
+        返回新创建的DataPackage对象或执行对象本身。
+        Args:
+            src_data_package_iter: 源对象迭代器
+            num_to_paste: 执行对象上最大粘贴源对象数量
+            allow_overlap: 是否允许源对象的标注条目与执行对象当时的标注条目发生重合，默认为False
+            num_max_try: 不允许发生重合时同一个源对象的最大尝试粘贴次数
+            overlap_margin: 判断是否发生重合时的雨量，默认为0
+            in_place: 是否原地操作，默认为False
+
+        Returns:
+
+        """
+
+        num_pasted = 0
+        if in_place:
+            ret = self
+        else:
+            ret = self.copy()
+        while num_pasted < num_to_paste:
+            try:
+                src_data_package = next(src_data_package_iter)
+            except StopIteration:
+                return ret
+
+            # 对源对象进行基本的增强操作
+            assert isinstance(src_data_package, DataPackage)
+
+            rotate_degree = random.randint(0, 3)
+            if rotate_degree != 0:
+                src_data_package = src_data_package.rotate_by_multi_90(
+                    rotate_degree * 90
+                )
+
+            stride = 1.0
+            scale_range = [0.9 / stride, 1.0 / stride]
+            scale_x = (
+                random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
+            )
+            scale_y = (
+                random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
+            )
+            src_data_package = src_data_package.resize_by_factor(fx=scale_x, fy=scale_y)
+
+            if allow_overlap:
+                # 在合法区域内随机生成粘贴位置左上角坐标
+                tl_x = random.randint(
+                    0, ret.img.shape[1] - src_data_package.img.shape[1] - 1
+                )
+                tl_y = random.randint(
+                    0, ret.img.shape[0] - src_data_package.img.shape[0] - 1
+                )
+                # 调用paste_by方法执行当前源对象的粘贴操作。
+                ret = ret.paste_by(src_data_package, tl_x, tl_y)
+            else:
+                num_try = 0
+                # 需要考虑重叠冲突处理的场合，循环操作直至生成有效位置，若到达最大尝试次数依然找不到有效位置，粘贴次数自增，跳过当前源对象的粘贴操作。
+                while num_try < num_max_try:
+                    tl_x = random.randint(
+                        0, ret.img.shape[1] - src_data_package.img.shape[1] - 1
+                    )
+                    tl_y = random.randint(
+                        0, ret.img.shape[0] - src_data_package.img.shape[0] - 1
+                    )
+                    if ret.check_overlap(
+                        tl_x - overlap_margin,
+                        tl_y - overlap_margin,
+                        src_data_package.img.shape[1] + overlap_margin * 2,
+                        src_data_package.img.shape[0] + overlap_margin * 2,
+                    ):
+                        # logger.info("conflict")
+                        num_try += 1
+                        if num_try == num_max_try:
+                            # logger.info("try max")
+                            pass
+                        continue
+                    else:
+                        # logger.info("paste")
+                        # 调用paste_by方法执行当前源对象的粘贴操作。
+                        ret = ret.paste_by(
+                            src_data_package, tl_x, tl_y, in_place=in_place
+                        )
+                        break
+            # ret.visualize()
+            num_pasted += 1
+        return ret
+
+    def check_overlap(self, tl_x, tl_y, width, height):
+        """
+        检查某个矩形区域是否与任意标注条目出现重合
+        Args:
+            tl_x: 矩形区域左上角x坐标
+            tl_y: 矩形区域左上角y坐标
+            width: 矩形区域宽度
+            height: 矩形区域高度
+
+        Returns:
+
+        """
+        pts = tl_x, tl_y, tl_x + width, tl_y + height
+        polygon_roi = cvutils.PolygonROI.create_from_rect_xyxy(*pts)
+
+        for label_item in self.label_items:
+            if label_item["shape_type"] == "rectangle":
+                pt1, pt2 = label_item["points"]
+                pts_ = [*pt1, *pt2]
+                polygon_roi_ = cvutils.PolygonROI.create_from_rect_xyxy(*pts_)
+                if polygon_roi.overlap(polygon_roi_):
+                    return True
+        return False
+
+    @classmethod
+    def mosaic_mxn(
+        cls, data_package_list, dst_size, m=2, n=2, img_path=None, jitter=0, img_val=0
+    ):
+        """
+        给定待拼接的DataPackage对象序列，目标尺寸，以及拼接块的行列数字，生成对象的img_path成员数据，预设像素值
+        Args:
+            data_package_list:
+            dst_size:
+            m:
+            n:
+            img_path:
+            jitter:
+            img_val:
+
+        Returns:
+
+        """
+        # 给定的待拼接对象数量应不大于m*n
+        assert len(data_package_list) <= m * n
+        # 创建目标尺寸的dp
+        width, height = dst_size
+        ret_dp = DataPackage.gen_default_data_package(
+            img_path=img_path, img_shape=[dst_size[1], dst_size[0], 3], img_val=img_val
+        )
+        # 计算每个拼接区域的左上角坐标
+        y_block_idx_list = list(range(m))
+        x_block_idx_list = list(range(n))
+        y_offset = height / m
+        x_offset = width / n
+        ys = [round(y_block_idx * y_offset) for y_block_idx in y_block_idx_list]
+        xs = [round(x_block_idx * x_offset) for x_block_idx in x_block_idx_list]
+        tl_coord_list = list(itertools.product(xs, ys))
+
+        # 将序列中的对象依次以列优先原则粘贴到待返回对象上。
+        for idx, dp in enumerate(data_package_list):
+            assert isinstance(dp, DataPackage)
+            x, y = tl_coord_list[idx]
+            x += random.randint(0, jitter[0])
+            y += random.randint(0, jitter[1])
+            ret_dp = ret_dp.paste_by(dp, x, y)
+        return ret_dp
+
+    @classmethod
+    def mosaic_1p5(cls, data_package_list, dst_size, img_path=None, loc=0):
+        ret_dp = DataPackage.gen_default_data_package(
+            img_path=img_path, img_shape=[dst_size[1], dst_size[0], 3]
+        )
+        # loc = random.randint(0, 3)
+        for idx, dp in enumerate(data_package_list):
+            assert isinstance(dp, DataPackage)
+            if loc == 0:
+                xs = [
+                    0,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3,
+                    0,
+                ]
+                ys = [
+                    0,
+                    0,
+                    dst_size[0] // 3,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                ]
+            elif loc == 1:
+                xs = [dst_size[0] // 3, 0, 0, 0, dst_size[0] // 3, dst_size[0] // 3 * 2]
+                ys = [
+                    0,
+                    0,
+                    dst_size[0] // 3,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                ]
+            elif loc == 2:
+                xs = [
+                    0,
+                    0,
+                    dst_size[0] // 3,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                    dst_size[0] // 3 * 2,
+                ]
+                ys = [dst_size[0] // 3, 0, 0, 0, dst_size[0] // 3, dst_size[0] // 3 * 2]
+            elif loc == 3:
+                xs = [dst_size[0] // 3, dst_size[0] // 3 * 2, dst_size[0] // 3, 0, 0, 0]
+                ys = [dst_size[0] // 3, 0, 0, 0, dst_size[0] // 3, dst_size[0] // 3 * 2]
+
+            ret_dp = dp.paste(ret_dp, xs[idx], ys[idx])
+        return ret_dp
 
 
 def crop_rectangle_items_for_folder(
