@@ -10,9 +10,11 @@ import cvutils
 import numpy as np
 import pyutils
 from loguru import logger
+from tqdm import tqdm
 
 __all__ = [
     "DataPackage",
+    "crop_rectangle_items_for_folder",
 ]
 
 
@@ -205,27 +207,74 @@ class DataPackage:
             fit_max = h < max_size[1] or w < max_size[0]
         return fit_min and fit_max
 
-    # 给定左上角坐标与宽高，裁剪图像与标注
     def crop(
         self,
         tl_x,
         tl_y,
-        width,
-        height,
+        br_x,
+        br_y,
         img_path=None,
         cat_idx=-1,
+        append_coords_to_file_name=True,
+        label_itself=False,
+        label=None,
+        group_id=None,
+        shape_type="rectangle",
+        flags=None,
     ):
-        rect = cvutils.RectROI.create_from_xywh(tl_x, tl_y, width, height)
+        """
+        输入待裁剪矩形区域的左上点与右下点坐标,输入返回DataPackage对象的img_path与cat_idx属性,
+        输入是否将待裁剪矩形区域本身作为新的label item写进返回的DataPackage对象中的标志,以及(若要写进时该label item)相关的字段,
+        返回新的DataPackage对象,该对象img属性为裁剪矩形图像,执行对象中被待裁剪矩形区域完全包含的label item,经过恰当平移后写进返回对象中.
+        Args:
+            tl_x: 待裁剪的矩形区域的左上点x坐标
+            tl_y: 待裁剪的矩形区域的左上点y坐标
+            br_x: 待裁剪的矩形区域的右下点x坐标
+            br_y: 待裁剪的矩形区域的右下点y坐标
+            img_path: 返回的DataPackage对象的img_path属性,默认为None
+            cat_idx: 返回的DataPackage对象的cat_idx属性,默认为-1
+            append_coords_to_file_name: 若img_path不为None且此参数为True,将待裁剪矩形区域的左上右下点坐标追加到img_path中.
+            label_itself: 待裁剪的矩形区域本身是否作为新的label item写进返回的DataPackage对象
+            label: 待裁剪的矩形区域本身作为新的label item写进返回的DataPackage对象时,该label item的label字段,默认为None
+            group_id: 待裁剪的矩形区域本身作为新的label item写进返回的DataPackage对象时,该label item的group_id字段,默认为None
+            shape_type: 待裁剪的矩形区域本身作为新的label item写进返回的DataPackage对象时,该label item的shape_type字段, 默认为rectangle
+            flags: 待裁剪的矩形区域本身作为新的label item写进返回的DataPackage对象时,该label item的flags字段,默认为None
+
+        Returns:
+            返回新创建的DataPackage对象,其img_path与cat_idx由输入参数决定,label_path由img_path通过默认方式确定,
+            对label属性,首先创建默认的label属性对象,遍历执行对象的label item,将其中标注类型为rectangle的,
+            并被待裁剪矩形区域完全包含的label item写进返回对象的label属性中,
+            todo:
+            最后根据输入参数决定是否将待裁剪矩形区域与相关信息生成label item,并追加到返回对象的label属性中.
+        """
+        tl_x = max(0, tl_x)
+        tl_y = max(0, tl_y)
+        br_x = min(self.img.shape[1], br_x)
+        br_y = min(self.img.shape[0], br_y)
+        rect = cvutils.RectROI.create_from_xywh(
+            tl_x, tl_y, br_x - tl_x + 1, br_y - tl_y + 1
+        )
+        if img_path is not None and append_coords_to_file_name:
+            img_path = str(Path(img_path).absolute())
+            img_path = Path(img_path).parent / Path(
+                Path(img_path).stem
+                + "_"
+                + "-".join(
+                    [
+                        str(round(tl_x)),
+                        str(round(tl_y)),
+                        str(round(br_x)),
+                        str(round(br_y)),
+                    ]
+                )
+            ).with_suffix(Path(img_path).suffix)
         label_path = (
             str(Path(img_path).with_suffix(".json")) if img_path is not None else None
         )
         img = rect.crop(self.img)
-        label_ = DataPackage.gen_default_label(
-            img_path=str(Path(img_path).name) if img_path is not None else None,
-            shape=(img.shape[0], img.shape[1]),
-        )
+        label_ = self.gen_default_label(img_path, img.shape)
 
-        for shapes_item in self.label["shapes"]:
+        for shapes_item in self.label_items:
             if shapes_item["shape_type"] == "rectangle":
                 tl_x_, tl_y_ = round(shapes_item["points"][0][0]), round(
                     shapes_item["points"][0][1]
@@ -233,8 +282,12 @@ class DataPackage:
                 br_x_, br_y_ = round(shapes_item["points"][1][0]), round(
                     shapes_item["points"][1][1]
                 )
-                # 若源标注rect完整落入目标图像中，则保留其标注到目标标注中（带取整操作）
-                if rect.contain([tl_x_, tl_y_]) and rect.contain([br_x_, br_y_]):
+                # 原始标注条目中完整落入裁剪区域中的标注，其他标注信息保留，坐标点经平移调整后写入到新对象的标注中。
+                total_contain = rect.contain([tl_x_, tl_y_]) and rect.contain(
+                    [br_x_, br_y_]
+                )
+
+                if total_contain:
                     tl = [tl_x_ - tl_x, tl_y_ - tl_y]
                     br = [br_x_ - tl_x, br_y_ - tl_y]
 
@@ -245,53 +298,88 @@ class DataPackage:
                     ]
                     label_["shapes"].append(temp)
 
+        # todo:
+        if label_itself:
+            pass
+
         return DataPackage(img_path, img, label_path, label_, cat_idx)
 
-    def crop_rectangle_item(self, rectangle_item, img_path=None, cat_idx=-1):
+    def crop_rectangle_item(
+        self, rectangle_item, margin_tblr=None, img_path=None, cat_idx=-1
+    ):
+        """
+        输入rectangle类型的label item(否则返回None),待返回DataPackage对象的img_path与cat_idx属性,调用对象方法crop返回新的DataPackage对象.
+        Args:
+            rectangle_item: 待裁剪的rectangle类型的label item,通常为执行对象label属性中的某个label item.
+            margin_tblr: 基于给定rectangle标注的矩形往四个方向上扩展生成的矩形为最终裁剪区域,默认为None
+            img_path: 待返回DataPackage对象的img_path,默认为None
+            cat_idx: 待返回DataPackage对象的cat_idx,默认为-1
+        Returns:
+
+        """
+        if not rectangle_item["shape_type"] == "rectangle":
+            return None
+
+        if margin_tblr is not None:
+            assert len(margin_tblr) == 4
+
         tl_x, tl_y = round(rectangle_item["points"][0][0]), round(
             rectangle_item["points"][0][1]
         )
         br_x, br_y = round(rectangle_item["points"][1][0]), round(
             rectangle_item["points"][1][1]
         )
-        # width, height = round(rectangle_item["points"][1][0]) - round(
-        #     rectangle_item["points"][0][0]
-        # ), round(rectangle_item["points"][1][1]) - round(rectangle_item["points"][0][1])
-        width = br_x - tl_x
-        height = br_y - tl_y
+        if margin_tblr is not None:
+            tl_x -= margin_tblr[2]
+            tl_y -= margin_tblr[0]
+            br_x += margin_tblr[3]
+            br_y += margin_tblr[1]
         return self.crop(
             tl_x,
             tl_y,
-            width,
-            height,
+            br_x,
+            br_y,
             img_path=img_path,
             cat_idx=cat_idx,
+            append_coords_to_file_name=True,
+            # label_itself=True,
+            # cat_idx=cat_idx,
+            # label=rectangle_item["label"],
+            # group_id=rectangle_item["group_id"],
+            # flags=rectangle_item["flags"],
+            # shape_type="rectangle",
         )
 
-    def crop_rectangle_items(self, dst_dir, include_labels=None, exclude_labels=None):
-        for idx, item in enumerate(self.label["shapes"]):
-            # 若给定了有效标注名字列表，则不考虑不在有效标注名字列表中的标注
-            if include_labels is not None and item["label"] not in include_labels:
-                continue
-            # 若给定了无效标注名字列表，则不考虑无效标注名字列表中的标注
-            if exclude_labels is not None and item["label"] in exclude_labels:
-                continue
+    def crop_rectangle_items(self, dst_dir=None, margin_tblr=None, filter_func=None):
+        """
+        裁剪执行对象的所有rectangle标注,返回DataPackage对象序列.
+        Args:
+            dst_dir: 裁剪生成的DataPackage序列的img_path所在的文件夹,若为None,则选用执行对象本身self.img_path
+            margin_tblr: 基于给定rectangle标注的矩形往四个方向上扩展生成的矩形为最终裁剪区域,默认为None
+            filter_func: 用户给定的作用于待裁剪标注的筛选条件,满足筛选条件的标注
 
-            if item["shape_type"] == "rectangle":
-                pt = [*item["points"][0], *item["points"][1]]
-                pt_name = [round(pt_) for pt_ in pt]
-                # 以裁剪的左上右下坐标追加到源的图像名字中作为裁剪图像的名字
-                saved_img_path = Path(dst_dir) / Path(
-                    self.img_path.stem + "_" + "_".join([str(pt_) for pt_ in pt_name])
-                ).with_suffix(".bmp")
+        Returns:
 
-                cropped_dp = self.crop_rectangle_item(
-                    item, img_path=str(saved_img_path)
+        """
+        if self.img_path is None or dst_dir is None:
+            dst_img_path = self.img_path
+        else:
+            dst_img_path = str(
+                Path(Path(dst_dir) / Path(self.img_path).name).absolute()
+            )
+        ret_list = []
+        for label_item in self.label_items:
+            if label_item["shape_type"] == "rectangle":
+                if (filter_func is not None) and (not filter_func(label_item)):
+                    continue
+                ret_list.append(
+                    self.crop_rectangle_item(
+                        rectangle_item=label_item,
+                        img_path=dst_img_path,
+                        margin_tblr=margin_tblr,
+                    )
                 )
-
-                cropped_dp.save_img()
-
-                cropped_dp.save_label()
+        return ret_list
 
     def visualize(self):
         img = self.img.copy()
@@ -311,3 +399,20 @@ class DataPackage:
     def save_label(self):
         if self.label_path is not None:
             pyutils.dump_json(self.label, self.label_path)
+
+
+def crop_rectangle_items_for_folder(
+    src_dir, dst_dir, filter_func=None, margin_tblr=None
+):
+    src_dir = str(Path(src_dir).absolute())
+    dst_dir = str(Path(dst_dir).absolute())
+    Path(dst_dir).absolute().mkdir(parents=True, exist_ok=True)
+    label_path_list = list(pyutils.glob_dir(src_dir, include_patterns=["*.json"]))
+    for label_path in tqdm(label_path_list, desc="..."):
+        dp = DataPackage.create_from_label_path(label_path)
+        cropped_dp_list = dp.crop_rectangle_items(
+            dst_dir=dst_dir, filter_func=filter_func, margin_tblr=margin_tblr
+        )
+
+        for cropped_dp in cropped_dp_list:
+            cropped_dp.save()
