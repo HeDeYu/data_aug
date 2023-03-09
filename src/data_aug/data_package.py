@@ -32,13 +32,13 @@ __all__ = [
 # 提供常用的方法,包括生成默认,保存,裁剪
 class DataPackage:
     @classmethod
-    def gen_default_label(cls, img_path, img_shape):
+    def gen_default_label(cls, img_path, img_shape, version="4.5.7"):
         """
         根据图像路径（仅有文件名字）与图像宽高生成默认的标注内容
         """
         return dict(
             # todo: remove the hard magic numbers below
-            version="4.5.7",
+            version=version,
             flags={},
             shapes=[],
             imagePath=img_path,
@@ -330,13 +330,15 @@ class DataPackage:
         if center:
             t = (dst_height - self.img.shape[0]) // 2
             b = dst_height - self.img.shape[0] - t
-            l_ = (dst_width - self.img.shape[1]) // 2
-            r = dst_width - self.img.shape[1] - l_
+            _l = (dst_width - self.img.shape[1]) // 2
+            r = dst_width - self.img.shape[1] - _l
             return self.pad_with_tblr(
-                pad_tblr=[t, b, l_, r],
+                pad_tblr=[t, b, _l, r],
                 img_path=img_path,
                 auto_gen_img_path=auto_gen_img_path,
             )
+        else:
+            raise NotImplementedError
 
     def crop(
         self,
@@ -382,9 +384,12 @@ class DataPackage:
         tl_y = max(0, tl_y)
         br_x = min(self.img.shape[1], br_x)
         br_y = min(self.img.shape[0], br_y)
+
         rect = cvutils.RectROI.create_from_xywh(
             tl_x, tl_y, br_x - tl_x + 1, br_y - tl_y + 1
         )
+        img = rect.crop(self.img)
+
         if img_path is not None and append_coords_to_file_name:
             img_path = str(Path(img_path).absolute())
             img_path = Path(img_path).parent / Path(
@@ -402,8 +407,8 @@ class DataPackage:
         label_path = (
             str(Path(img_path).with_suffix(".json")) if img_path is not None else None
         )
-        img = rect.crop(self.img)
-        label_ = self.gen_default_label(img_path, img.shape)
+
+        label_ = self.gen_default_label(str(img_path), img.shape)
 
         for shapes_item in self.label_items:
             if shapes_item["shape_type"] == "rectangle":
@@ -428,7 +433,8 @@ class DataPackage:
                         [round(br[0]), round(br[1])],
                     ]
                     label_["shapes"].append(temp)
-
+            else:
+                continue
         # todo:
         if label_itself:
             pass
@@ -544,6 +550,7 @@ class DataPackage:
         )
 
     def crop_point_items(self, dst_dir=None, crop_size=None, filter_func=None):
+        assert crop_size is not None
         raise NotImplementedError
 
     def visualize(self):
