@@ -124,6 +124,15 @@ class DataPackage:
         self.label = copy.deepcopy(label)
         self.cat_idx = cat_idx
 
+    def copy(self):
+        return DataPackage(
+            img_path=self.img_path,
+            img=self.img.copy(),
+            label_path=self.label_path,
+            label=copy.deepcopy(self.label),
+            cat_idx=self.cat_idx,
+        )
+
     def filter_with_size(
         self,
         min_size=[0, 0],
