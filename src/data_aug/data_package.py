@@ -133,6 +133,21 @@ class DataPackage:
             cat_idx=self.cat_idx,
         )
 
+    def update_img_path(self, img_path, update_label_path_by_default=True):
+        """
+        更新执行对象的img_path数据成员（以及label数据成员中的imagePath字段），并根据参数默认更新label_path数据成员。
+        Args:
+            img_path: 新的img_path
+            update_label_path_by_default: 是否采用默认方式更新执行对象的label_path数据成员
+
+        Returns:
+
+        """
+        self.img_path = img_path
+        self.label["imagePath"] = str(Path(img_path).name)
+        if update_label_path_by_default:
+            self.label_path = str(Path(img_path).with_suffix(".json"))
+
     def filter_with_size(
         self,
         min_size=[0, 0],
