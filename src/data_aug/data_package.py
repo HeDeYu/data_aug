@@ -177,6 +177,30 @@ class DataPackage:
             fit_max = h < max_size[1] or w < max_size[0]
         return fit_min and fit_max
 
+    def gen_rectangle_items(self):
+        """
+        返回标注类型为rectangle的元素列表，元素对象为cvutils.RectROI对象
+        """
+        rectangle_items = []
+        for shapes_item in self.label_items:
+            if shapes_item["shape_type"] == "rectangle":
+                rectangle_items.append(
+                    cvutils.RectROI.create_from_xyxy(
+                        shapes_item["points"][0][0],
+                        shapes_item["points"][0][1],
+                        shapes_item["points"][1][0],
+                        shapes_item["points"][1][1],
+                    )
+                )
+        return rectangle_items
+
+    @property
+    def rectangle_items(self):
+        """
+        返回标注类型为rectangle的cvutils.RectROI对象列表，注意只有坐标信息，其余标注信息已丢失
+        """
+        return self.gen_rectangle_items()
+
     # 给定左上角坐标与宽高，裁剪图像与标注
     def crop(
         self,
