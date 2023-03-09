@@ -443,6 +443,36 @@ class DataPackage:
             ret_dp.label_items.append(self.resize_label_item(label_item, fx, fy))
         return ret_dp
 
+    def rotate_by_multi_90(self, rotate_degree):
+        """
+        将执行对象旋转-90, 90，180或270度，返回新创建的旋转后的DataPackage对象
+        Args:
+            rotate_degree: 旋转角度，可选取90，-90，180或270度，其中正数表示逆时针旋转。
+
+        Returns:
+
+        """
+        assert rotate_degree in [90, 180, 270, -90]
+        if rotate_degree == -90:
+            rotate_degree = 270
+        if rotate_degree == 90:
+            rotate_flag = cv2.ROTATE_90_COUNTERCLOCKWISE
+        elif rotate_degree == 270:
+            rotate_flag = cv2.ROTATE_90_CLOCKWISE
+        else:
+            rotate_flag = cv2.ROTATE_180
+        img = cv2.rotate(self.img, rotate_flag)
+        img_shape = img.shape
+        img_path = pyutils.append_file_name(self.img_path, f"_rotate-{rotate_degree}")
+        ret_dp = DataPackage.gen_default_data_package(img_path, img_shape)
+        ret_dp.img = img
+        for label_item in self.label_items:
+            ret_dp.label_items.append(
+                self.rotate_label_item(label_item, self.img.shape, rotate_degree)
+            )
+            pass
+        return ret_dp
+
     def visualize(self):
         img = self.img.copy()
         for rectangle_item in self.rectangle_items:
