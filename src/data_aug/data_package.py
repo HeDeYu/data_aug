@@ -568,6 +568,77 @@ class DataPackage:
         save_label = self.save_label()
         return save_img and save_label
 
+    @staticmethod
+    def translate_label_item(label_item, x, y):
+        """
+        对输入标注item的所有点进行x，y平移，其它内容保持不变，返回新创建的标注item
+        Args:
+            label_item: 需要进行平移的标注条目
+            x: x平移量
+            y: y平移量
+
+        Returns:
+
+        """
+        new_label_item = copy.deepcopy(label_item)
+        new_label_item["points"] = []
+        for pt in label_item["points"]:
+            new_label_item["points"].append([pt[0] + x, pt[1] + y])
+        return new_label_item
+
+    @staticmethod
+    def resize_label_item(label_item, fx, fy):
+        """
+        对输入标注item的所有点进行fx，fy的缩放，其它内容保持不变，返回新创建的标注item
+        Args:
+            label_item: 需要进行缩放的标注条目
+            fx: x缩放系数
+            fy: y缩放系数
+
+        Returns:
+
+        """
+        new_label_item = copy.deepcopy(label_item)
+        new_label_item["points"] = []
+        for pt in label_item["points"]:
+            new_label_item["points"].append([pt[0] * fx, pt[1] * fy])
+        return new_label_item
+
+    @staticmethod
+    def rotate_label_item(label_item, img_shape, rotate_degree):
+        """
+        将标注条目旋转90，180或270度，并进行必要的平移。
+        Args:
+            label_item: 待旋转的标注条目
+            img_shape: 旋转后图像的shape
+            rotate_degree: 旋转角度，90，180，270
+
+        Returns:
+
+        """
+        h, w = img_shape[:2]
+        if rotate_degree == 90:
+            M = np.array([[0, 1, 0], [-1, 0, w], [0, 0, 1]])
+        elif rotate_degree == 270:
+            M = np.array([[0, -1, h], [1, 0, 0], [0, 0, 1]])
+        else:
+            M = np.array([[-1, 0, w], [0, -1, h], [0, 0, 1]])
+        new_label_item = copy.deepcopy(label_item)
+        new_label_item["points"] = []
+
+        if label_item["shape_type"] == "rectangle":
+            pt = label_item["points"][0]
+            x1, y1 = np.matmul(M, np.array([pt[0], pt[1], 1])).tolist()[:2]
+            pt = label_item["points"][1]
+            x2, y2 = np.matmul(M, np.array([pt[0], pt[1], 1])).tolist()[:2]
+            new_label_item["points"].append([min(x1, x2), min(y1, y2)])
+            new_label_item["points"].append([max(x1, x2), max(y1, y2)])
+        else:
+            for pt in label_item["points"]:
+                new_pt = np.matmul(M, np.array([pt[0], pt[1], 1])).tolist()[:2]
+                new_label_item["points"].append([new_pt[0], new_pt[1]])
+        return new_label_item
+
 
 def crop_rectangle_items_for_folder(
     src_dir, dst_dir, filter_func=None, margin_tblr=None
