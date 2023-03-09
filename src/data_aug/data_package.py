@@ -6,6 +6,7 @@
 import copy
 from pathlib import Path
 
+import cv2
 import cvutils
 import numpy as np
 import pyutils
@@ -418,6 +419,29 @@ class DataPackage:
 
     def crop_point_items(self, dst_dir=None, crop_size=None, filter_func=None):
         raise NotImplementedError
+
+    def resize_by_factor(self, fx, fy, interpolation=1):
+        """
+        给定缩放系数，返回新创建的缩放后的DataPackage对象
+        Args:
+            fx: x缩放系数
+            fy: y缩放系数
+            interpolation: 插值方式，默认为1（linear）
+
+        Returns:
+
+        """
+
+        img = cv2.resize(self.img, None, fx=fx, fy=fy, interpolation=interpolation)
+        img_shape = img.shape
+        img_path = pyutils.append_file_name(
+            self.img_path, f"_resize-{img_shape[1]}-{img_shape[0]}"
+        )
+        ret_dp = DataPackage.gen_default_data_package(img_path, img_shape)
+        ret_dp.img = img
+        for label_item in self.label_items:
+            ret_dp.label_items.append(self.resize_label_item(label_item, fx, fy))
+        return ret_dp
 
     def visualize(self):
         img = self.img.copy()
