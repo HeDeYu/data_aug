@@ -4,6 +4,7 @@
 # @Time     :2022/11/29 17:15
 
 import copy
+import datetime
 import itertools
 import random
 from pathlib import Path
@@ -985,3 +986,137 @@ def crop_rectangle_items_for_folder(
 
 def crop_point_items_for_folder(src_dir, dst_dir, filter_func=None, crop_size=None):
     raise NotImplementedError
+
+
+def paste_by_iter_for_folder(
+    fg_dir,
+    bg_dir,
+    dst_dir,
+    suffix_patterns,
+    dst_size,
+    num_to_gen,
+    num_to_paste=1,
+    allow_overlap=False,
+    num_max_try=1,
+    overlap_margin=0,
+):
+    """
+    用户给定前景文件夹，背景文件夹，图像后缀，输出目标文件夹，生成图像的尺寸，以及DataPackage类的paste_by_iter方法所需的其他参数，
+    从前景文件夹与目标文件夹中选取图片进行粘贴操作。
+    Args:
+        fg_dir: 前景文件夹路径
+        bg_dir: 背景文件夹路径
+        dst_dir:
+        suffix_patterns:
+        dst_size:
+        num_to_gen:
+        num_to_paste:
+        allow_overlap:
+        num_max_try:
+        overlap_margin:
+
+    Returns:
+
+    """
+    pyutils.mkdir(dst_dir)
+
+    fg_data_package_list = gen_data_package_list_from_img_file_for_folder(
+        fg_dir, suffix_patterns
+    )
+    bg_data_package_list = gen_data_package_list_from_img_file_for_folder(
+        bg_dir, suffix_patterns
+    )
+    assert len(fg_data_package_list)
+    assert len(bg_data_package_list)
+    logger.info(f"fg imgs num: {len(fg_data_package_list)}")
+    fg_dp_cyclic_iter = pyutils.make_cyclic_iterator(fg_data_package_list)
+    bg_dp_cyclic_iter = pyutils.make_cyclic_iterator(bg_data_package_list)
+
+    for _ in tqdm(
+        range(num_to_gen),
+        desc=f"synthesizing images (num to generate = {num_to_gen}, num_to_paste = {num_to_paste}): ",
+    ):
+        # 获取一个背景dp
+        bg_dp = next(bg_dp_cyclic_iter)
+        assert isinstance(bg_dp, DataPackage)
+        # todo: 裁剪背景dp到指定尺寸
+        tl_x = random.randint(0, bg_dp.img.shape[1] - dst_size[1] - 1)
+        tl_y = random.randint(0, bg_dp.img.shape[0] - dst_size[0] - 1)
+        # todo: 若bg图的尺寸小于目标尺寸，执行pad操作
+        assert bg_dp.img.shape[0] > dst_size[0] and bg_dp.img.shape[1] > dst_size[1]
+        ret = bg_dp.crop(
+            tl_x,
+            tl_y,
+            tl_x + dst_size[1] - 1,
+            tl_y + dst_size[0] - 1,
+            img_path=bg_dp.img_path,
+            append_coords_to_file_name=True,
+        )
+
+        # 调用paste_by_iter方法获取粘贴后的dp对象
+        ret = ret.paste_by_iter(
+            src_data_package_iter=fg_dp_cyclic_iter,
+            num_to_paste=num_to_paste,
+            allow_overlap=allow_overlap,
+            num_max_try=num_max_try,
+            overlap_margin=overlap_margin,
+            in_place=False,
+        )
+        # 更新生成的dp对象的路径信息,保存生成的dp对象
+        ret_img_path = pyutils.replace_parent(
+            pyutils.append_file_name(
+                ret.img_path,
+                "_paste-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f"),
+            ),
+            dst_dir,
+        )
+        ret.update_img_path(ret_img_path)
+        ret.save()
+
+
+def mosaic_mxn_for_folder(
+    mosaic_dir_list, suffix_patterns, dst_dir, dst_size, m, n, num_to_gen, img_val=0
+):
+    pyutils.mkdir(dst_dir)
+
+    ingredient_iter_list = []
+    for mosaic_dir in mosaic_dir_list:
+        ingredient_iter_list.append(
+            pyutils.make_cyclic_iterator(
+                gen_data_package_list_from_img_file_for_folder(
+                    mosaic_dir, suffix_patterns
+                )
+            )
+        )
+
+    ingredient_iter_idx_iter = pyutils.make_cyclic_iterator(
+        range(len(ingredient_iter_list))
+    )
+
+    for _ in tqdm(
+        range(num_to_gen), desc=f"mosaic images (num to gen = {num_to_gen}): "
+    ):
+        ingredient_dp_list = []
+        for _ in range(m * n):
+            ingredient_dp_list.append(
+                next(ingredient_iter_list[next(ingredient_iter_idx_iter)])
+            )
+        dp_height, dp_width = ingredient_dp_list[0].img.shape[:2]
+        jitter_x = (dst_size[0] - (dp_width * n)) // n
+        jitter_y = (dst_size[1] - (dp_height * m)) // m
+        # logger.info(f"{jitter_x} {jitter_y}")
+        ret = DataPackage.mosaic_mxn(
+            ingredient_dp_list, dst_size, jitter=[jitter_x, jitter_y], m=m, n=n
+        )
+
+        ret.update_img_path(
+            Path(dst_dir)
+            / (datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".bmp")
+        )
+        # ret.visualize()
+        save_success = ret.save()
+        import time
+
+        time.sleep(0.1)
+        if not save_success:
+            logger.info(f"{ret.img_path}, {ret.label_path}")
