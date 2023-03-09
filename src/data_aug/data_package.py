@@ -81,7 +81,7 @@ class DataPackage:
         if Path(label_path).exists():
             # 若标注文件存在，载入标注，并校验标注文件中图像文件的正确性。
             label = pyutils.load_json(label_path)
-            if label["imagePath"] != str(Path(img_path).name):
+            if str(Path(label["imagePath"]).name) != str(Path(img_path).name):
                 logger.warning(
                     f"{img_path} and {label_path} does not match in imagePath"
                 )
@@ -747,13 +747,14 @@ class DataPackage:
 
             # 对源对象进行基本的增强操作
             assert isinstance(src_data_package, DataPackage)
-
+            # 随机旋转90°整数倍
             rotate_degree = random.randint(0, 3)
             if rotate_degree != 0:
                 src_data_package = src_data_package.rotate_by_multi_90(
                     rotate_degree * 90
                 )
 
+            # 均匀分布方式在某个区间内生成缩放系数
             stride = 1.0
             scale_range = [0.9 / stride, 1.0 / stride]
             scale_x = (

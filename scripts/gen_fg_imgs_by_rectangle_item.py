@@ -64,7 +64,6 @@ def filter_func_only_8p4r_with_pad(label_item):
 # ]
 
 margin_tblr = [20, 20, 20, 20]
-# margin_tblr = None
 filter_func = filter_func_only_with_pad
 crop_rectangle_items_for_folder(
     src_dir=r"D:\data\raw\chip_stb_15um_without_01005",
@@ -72,6 +71,35 @@ crop_rectangle_items_for_folder(
     filter_func=filter_func,
     margin_tblr=margin_tblr,
 )
+
+margin_tblr = [20, 20, 20, 20]
+filter_func = filter_func_only_with_pad
+crop_rectangle_items_for_folder(
+    src_dir=r"D:\data\raw\led_stb",
+    dst_dir=r"D:\data\fg\led_stb",
+    filter_func=filter_func,
+    margin_tblr=margin_tblr,
+)
+
+
+margin_tblr = [20, 20, 20, 20]
+filter_func = filter_func_only_with_pad
+crop_rectangle_items_for_folder(
+    src_dir=r"D:\data\raw\sot_stb",
+    dst_dir=r"D:\data\fg\sot_stb",
+    filter_func=filter_func,
+    margin_tblr=margin_tblr,
+)
+
+margin_tblr = [20, 20, 20, 20]
+filter_func = filter_func_only_with_pad
+crop_rectangle_items_for_folder(
+    src_dir=r"D:\data\raw\8p4r_stb",
+    dst_dir=r"D:\data\fg\8p4r_stb",
+    filter_func=filter_func,
+    margin_tblr=margin_tblr,
+)
+
 #
 # crop_rectangle_items_for_folder(
 #         src_dir=r"D:\data\AutoProgram\obj_det\raw\stb\stb_led",
