@@ -207,6 +207,10 @@ class DataPackage:
             fit_max = h < max_size[1] or w < max_size[0]
         return fit_min and fit_max
 
+    def merge(self, other):
+        self.label_items.extend(other.label_items)
+        return self
+
     def crop(
         self,
         tl_x,
@@ -381,6 +385,40 @@ class DataPackage:
                 )
         return ret_list
 
+    def crop_point_item(self, point_item, crop_size, img_path=None, cat_idx=-1):
+        """
+        输入point类型的label item且包含点数为1(否则返回None),待返回DataPackage对象的img_path与cat_idx属性,调用对象方法crop返回新的DataPackage对象.
+        Args:
+            point_item: 待裁剪的point类型的label item,通常为执行对象label属性中的某个label item
+            crop_size: 待裁剪的矩形区域尺寸
+            img_path: 待返回DataPackage对象的img_path,默认为None
+            cat_idx: 待返回DataPackage对象的cat_idx,默认为-1
+
+        Returns:
+
+        """
+        if (not point_item["shape_type"] == "point") or len(point_item["points"]) != 1:
+            return None
+        center_x, center_y = point_item["points"][0]
+        center_x = round(center_x)
+        center_y = round(center_y)
+        tl_x = center_x - crop_size[0] // 2
+        tl_y = center_y - crop_size[1] // 2
+        br_x = tl_x + crop_size[0] - 1
+        br_y = tl_y + crop_size[1] - 1
+        return self.crop(
+            tl_x,
+            tl_y,
+            br_x,
+            br_y,
+            img_path=img_path,
+            cat_idx=cat_idx,
+            append_coords_to_file_name=True,
+        )
+
+    def crop_point_items(self, dst_dir=None, crop_size=None, filter_func=None):
+        raise NotImplementedError
+
     def visualize(self):
         img = self.img.copy()
         for rectangle_item in self.rectangle_items:
@@ -427,3 +465,7 @@ def crop_rectangle_items_for_folder(
 
         for cropped_dp in cropped_dp_list:
             cropped_dp.save()
+
+
+def crop_point_items_for_folder(src_dir, dst_dir, filter_func=None, crop_size=None):
+    raise NotImplementedError
