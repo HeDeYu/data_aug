@@ -9,6 +9,7 @@ from pathlib import Path
 import cvutils
 import numpy as np
 import pyutils
+from loguru import logger
 
 __all__ = [
     "DataPackage",
@@ -45,17 +46,44 @@ class DataPackage:
         label = cls.gen_default_label(img_path, img_shape[:2])
         return DataPackage(img_path, img, None, label)
 
-    # 通过图像路径生成对象，其中标注路径与图像路径一致，仅替换后缀，仅适用与图像与标注放置在同一文件夹下的情况，若标注文件不存在，生成默认的标注内容
     @classmethod
     def create_from_img_path(cls, img_path, cat_idx=-1):
+        """
+        类方法,通过图像路径(并生成绝对路径)创建DataPackage对象,通过默认同名方式获取标注路径,若标注文件存在,校验载入的标注内容中的imagePath,
+        imageWidth与imageHeight(但不会修改本地标注文件),若标注文件不存在,创建默认标注内容.
+        Args:
+            img_path:
+            cat_idx:
+
+        Returns:
+
+        """
+        assert img_path is not None
+        img_path = str(Path(img_path).absolute())
         img = cvutils.imread(img_path)
+        img = img[:, :, :3]
         label_path = Path(img_path).with_suffix(".json")
         if Path(label_path).exists():
+            # 若标注文件存在，载入标注，并校验标注文件中图像文件的正确性。
             label = pyutils.load_json(label_path)
+            if label["imagePath"] != str(Path(img_path).name):
+                logger.warning(
+                    f"{img_path} and {label_path} does not match in imagePath"
+                )
+                label["imagePath"] = str(Path(img_path).name)
+            if label["imageHeight"] != img.shape[0]:
+                logger.warning(
+                    f"{img_path} and {label_path} does not match in imageHeight"
+                )
+                label["imageHeight"] = img.shape[0]
+            if label["imageWidth"] != img.shape[1]:
+                logger.warning(
+                    f"{img_path} and {label_path} does not match in imageWidth"
+                )
+                label["imageWidth"] = img.shape[1]
         else:
-            label = DataPackage.gen_default_label(
-                str(Path(img_path).name), (img.shape[0], img.shape[1])
-            )
+            # 若标注文件不存在，构造默认标注内容，写入实际的图像路径与尺寸。
+            label = cls.gen_default_label(img_path, img.shape)
         return cls(img_path, img, label_path, label, cat_idx)
 
     # 通过标注路径生成对象，其中图像路径通过标注内容获取
