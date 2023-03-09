@@ -17,7 +17,11 @@ from tqdm import tqdm
 
 __all__ = [
     "DataPackage",
+    "gen_data_package_list_from_img_file_for_folder",
+    "gen_data_package_list_from_label_file_for_folder",
+    "filter_with_size_for_folder",
     "crop_rectangle_items_for_folder",
+    "crop_point_items_for_folder",
 ]
 
 
@@ -912,6 +916,54 @@ class DataPackage:
 
             ret_dp = dp.paste(ret_dp, xs[idx], ys[idx])
         return ret_dp
+
+
+def gen_data_package_list_from_img_file_for_folder(dir_path, suffix_patterns):
+    if not isinstance(dir_path, list):
+        dir_path = [dir_path]
+    img_path_list = []
+    for dir_path_ in dir_path:
+        img_path_list.extend(
+            list(
+                pyutils.glob_dir(
+                    str(Path(dir_path_).absolute()), include_patterns=suffix_patterns
+                )
+            )
+        )
+    return [DataPackage.create_from_img_path(img_path) for img_path in img_path_list]
+
+
+def gen_data_package_list_from_label_file_for_folder(dir_path):
+    if not isinstance(dir_path, list):
+        dir_path = [dir_path]
+    label_path_list = []
+    for dir_path_ in dir_path:
+        label_path_list.extend(
+            list(
+                pyutils.glob_dir(
+                    str(Path(dir_path_).absolute()), include_patterns=["*.json"]
+                )
+            )
+        )
+    return [
+        DataPackage.create_from_label_path(label_path) for label_path in label_path_list
+    ]
+
+
+def filter_with_size_for_folder(
+    src_dir,
+    min_size=[0, 0],
+    max_size=[float("inf"), float("inf")],
+    min_mode="and",
+    max_mode="and",
+):
+    dp_list = gen_data_package_list_from_label_file_for_folder(src_dir)
+    ret = [
+        dp
+        for dp in dp_list
+        if dp.filter_with_size(min_size, max_size, min_mode, max_mode)
+    ]
+    return ret
 
 
 def crop_rectangle_items_for_folder(
