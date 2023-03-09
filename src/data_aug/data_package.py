@@ -23,6 +23,7 @@ __all__ = [
     "filter_with_size_for_folder",
     "crop_rectangle_items_for_folder",
     "crop_point_items_for_folder",
+    "paste_by_iter_for_folder",
 ]
 
 
