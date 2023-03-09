@@ -395,10 +395,21 @@ class DataPackage:
     def save_img(self):
         if self.img_path is not None:
             cvutils.imwrite(self.img_path, self.img)
+            return True
+        logger.warning(r"self.img_path is None!")
+        return False
 
     def save_label(self):
         if self.label_path is not None:
             pyutils.dump_json(self.label, self.label_path)
+            return True
+        logger.warning(r"self.label_path is None!")
+        return False
+
+    def save(self):
+        save_img = self.save_img()
+        save_label = self.save_label()
+        return save_img and save_label
 
 
 def crop_rectangle_items_for_folder(
