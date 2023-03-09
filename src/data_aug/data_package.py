@@ -124,6 +124,35 @@ class DataPackage:
         self.label = copy.deepcopy(label)
         self.cat_idx = cat_idx
 
+    def filter_with_size(
+        self,
+        min_size=[0, 0],
+        max_size=[float("inf"), float("inf")],
+        min_mode="and",
+        max_mode="and",
+    ):
+        """
+        给定尺寸范围与模式（and或者or），返回执行对象是否满足给定尺寸范围
+        Args:
+            min_size:
+            max_size:
+            min_mode:
+            max_mode:
+
+        Returns:
+
+        """
+        h, w = self.img.shape[:2]
+        if min_mode == "and":
+            fit_min = h >= min_size[1] and w >= min_size[0]
+        else:
+            fit_min = h >= min_size[1] or w >= min_size[0]
+        if max_mode == "and":
+            fit_max = h < max_size[1] and w < max_size[0]
+        else:
+            fit_max = h < max_size[1] or w < max_size[0]
+        return fit_min and fit_max
+
     # 给定左上角坐标与宽高，裁剪图像与标注
     def crop(
         self,
