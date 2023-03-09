@@ -212,6 +212,124 @@ class DataPackage:
         self.label_items.extend(other.label_items)
         return self
 
+    def resize_by_factor(self, fx, fy, interpolation=1):
+        """
+        给定缩放系数，返回新创建的缩放后的DataPackage对象
+        Args:
+            fx: x缩放系数
+            fy: y缩放系数
+            interpolation: 插值方式，默认为1（linear）
+
+        Returns:
+
+        """
+
+        img = cv2.resize(self.img, None, fx=fx, fy=fy, interpolation=interpolation)
+        img_shape = img.shape
+        img_path = pyutils.append_file_name(
+            self.img_path, f"_resize-{img_shape[1]}-{img_shape[0]}"
+        )
+        ret_dp = DataPackage.gen_default_data_package(img_path, img_shape)
+        ret_dp.img = img
+        for label_item in self.label_items:
+            ret_dp.label_items.append(self.resize_label_item(label_item, fx, fy))
+        return ret_dp
+
+    def rotate_by_multi_90(self, rotate_degree):
+        """
+        将执行对象旋转-90, 90，180或270度，返回新创建的旋转后的DataPackage对象
+        Args:
+            rotate_degree: 旋转角度，可选取90，-90，180或270度，其中正数表示逆时针旋转。
+
+        Returns:
+
+        """
+        assert rotate_degree in [90, 180, 270, -90]
+        if rotate_degree == -90:
+            rotate_degree = 270
+        if rotate_degree == 90:
+            rotate_flag = cv2.ROTATE_90_COUNTERCLOCKWISE
+        elif rotate_degree == 270:
+            rotate_flag = cv2.ROTATE_90_CLOCKWISE
+        else:
+            rotate_flag = cv2.ROTATE_180
+        img = cv2.rotate(self.img, rotate_flag)
+        img_shape = img.shape
+        img_path = pyutils.append_file_name(self.img_path, f"_rotate-{rotate_degree}")
+        ret_dp = DataPackage.gen_default_data_package(img_path, img_shape)
+        ret_dp.img = img
+        for label_item in self.label_items:
+            ret_dp.label_items.append(
+                self.rotate_label_item(label_item, self.img.shape, rotate_degree)
+            )
+            pass
+        return ret_dp
+
+    def pad_with_tblr(self, pad_tblr, img_path=None, auto_gen_img_path=True):
+        t, b, l, r = pad_tblr
+        new_height = self.img.shape[0] + t + b
+        new_width = self.img.shape[1] + l + r
+        num_channels = len(self.img.shape)
+        if num_channels == 1:
+            new_img = np.zeros(shape=(new_height, new_width), dtype=self.img.dtype)
+            new_img[
+                t : t + self.img.shape[0], l : l + self.img.shape[1]
+            ] = self.img.copy()
+        elif num_channels == 3:
+            new_img = np.zeros(shape=(new_height, new_width, 3), dtype=self.img.dtype)
+            new_img[
+                t : t + self.img.shape[0], l : l + self.img.shape[1], :
+            ] = self.img.copy()
+        new_label = copy.deepcopy(self.label)
+        new_label["imageHeight"] = new_height
+        new_label["imageWidth"] = new_width
+        new_label["shapes"] = []
+        for label_item in self.label_items:
+            new_label["shapes"].append(self.translate_label_item(label_item, l, t))
+        if img_path is None and auto_gen_img_path:
+            dir_path = Path(Path(self.img_path).parent)
+            img_path = str(
+                dir_path
+                / Path(
+                    Path(self.img_path).stem
+                    + "_tblr-"
+                    + str(round(t))
+                    + "-"
+                    + str(round(b))
+                    + "-"
+                    + str(round(l))
+                    + "-"
+                    + str(round(r))
+                ).with_suffix(Path(self.img_path).suffix)
+            )
+            new_label["imagePath"] = str(Path(img_path).name)
+        elif img_path is None:
+            new_label["imagePath"] = None
+        return DataPackage(
+            img_path=img_path,
+            img=new_img,
+            label_path=None,
+            label=new_label,
+            cat_idx=self.cat_idx,
+        )
+
+    def pad_with_dst_size(
+        self, dst_size, center=True, img_path=None, auto_gen_img_path=True
+    ):
+        dst_width, dst_height = dst_size
+        assert dst_height >= self.img.shape[0]
+        assert dst_width >= self.img.shape[1]
+        if center:
+            t = (dst_height - self.img.shape[0]) // 2
+            b = dst_height - self.img.shape[0] - t
+            l_ = (dst_width - self.img.shape[1]) // 2
+            r = dst_width - self.img.shape[1] - l_
+            return self.pad_with_tblr(
+                pad_tblr=[t, b, l_, r],
+                img_path=img_path,
+                auto_gen_img_path=auto_gen_img_path,
+            )
+
     def crop(
         self,
         tl_x,
@@ -419,59 +537,6 @@ class DataPackage:
 
     def crop_point_items(self, dst_dir=None, crop_size=None, filter_func=None):
         raise NotImplementedError
-
-    def resize_by_factor(self, fx, fy, interpolation=1):
-        """
-        给定缩放系数，返回新创建的缩放后的DataPackage对象
-        Args:
-            fx: x缩放系数
-            fy: y缩放系数
-            interpolation: 插值方式，默认为1（linear）
-
-        Returns:
-
-        """
-
-        img = cv2.resize(self.img, None, fx=fx, fy=fy, interpolation=interpolation)
-        img_shape = img.shape
-        img_path = pyutils.append_file_name(
-            self.img_path, f"_resize-{img_shape[1]}-{img_shape[0]}"
-        )
-        ret_dp = DataPackage.gen_default_data_package(img_path, img_shape)
-        ret_dp.img = img
-        for label_item in self.label_items:
-            ret_dp.label_items.append(self.resize_label_item(label_item, fx, fy))
-        return ret_dp
-
-    def rotate_by_multi_90(self, rotate_degree):
-        """
-        将执行对象旋转-90, 90，180或270度，返回新创建的旋转后的DataPackage对象
-        Args:
-            rotate_degree: 旋转角度，可选取90，-90，180或270度，其中正数表示逆时针旋转。
-
-        Returns:
-
-        """
-        assert rotate_degree in [90, 180, 270, -90]
-        if rotate_degree == -90:
-            rotate_degree = 270
-        if rotate_degree == 90:
-            rotate_flag = cv2.ROTATE_90_COUNTERCLOCKWISE
-        elif rotate_degree == 270:
-            rotate_flag = cv2.ROTATE_90_CLOCKWISE
-        else:
-            rotate_flag = cv2.ROTATE_180
-        img = cv2.rotate(self.img, rotate_flag)
-        img_shape = img.shape
-        img_path = pyutils.append_file_name(self.img_path, f"_rotate-{rotate_degree}")
-        ret_dp = DataPackage.gen_default_data_package(img_path, img_shape)
-        ret_dp.img = img
-        for label_item in self.label_items:
-            ret_dp.label_items.append(
-                self.rotate_label_item(label_item, self.img.shape, rotate_degree)
-            )
-            pass
-        return ret_dp
 
     def visualize(self):
         img = self.img.copy()
