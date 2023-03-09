@@ -23,66 +23,66 @@ fg_root = r"D:\data\fg"
 # ]
 # fg_img_dirs_all_all_l = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_all_l]
 
-fg_img_dirs_all_rc_s = [r"STB_RC_S", r"BLS_RC_S"]
-fg_img_dirs_all_rc_s = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_rc_s]
-
-fg_img_dirs_all_rc_m = [
-    r"STB_RC_M",
-    r"BLS_RC_M",
-    r"STB_LED_M",
-    r"BLS_LED_M",
-]
-fg_img_dirs_all_rc_m = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_rc_m]
-
-fg_img_dirs_all_rc_l = [
-    r"STB_RC_L",
-    r"BLS_RC_L",
-    r"STB_LED_L",
-    r"BLS_LED_L",
-]
-fg_img_dirs_all_rc_l = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_rc_l]
-
-fg_img_dirs_all_sot_m = [
-    r"STB_SOT_M",
-    r"BLS_SOT_M",
-    r"STB_8P4R_M",
-    r"BLS_8P4R_M",
-]
-fg_img_dirs_all_sot_m = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_sot_m]
-
-fg_img_dirs_all_sot_l = [
-    r"STB_SOT_L",
-    r"BLS_SOT_L",
-    r"STB_8P4R_L",
-    r"BLS_8P4R_L",
-]
-fg_img_dirs_all_sot_l = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_sot_l]
-
-fg_img_dirs_all_sot_xl = [
-    r"STB_SOT_XL",
-    r"BLS_SOT_XL",
-]
-fg_img_dirs_all_sot_xl = [
-    os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_sot_xl
-]
-
-fg_img_dirs_all_ic_m = [
-    # r"STB_IC_L",
-    r"BLS_IC_M",
-]
-fg_img_dirs_all_ic_m = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_ic_m]
-
-fg_img_dirs_all_ic_l = [
-    # r"STB_IC_L",
-    r"BLS_IC_L",
-]
-fg_img_dirs_all_ic_l = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_ic_l]
-
-fg_img_dirs_all_ic_xl = [
-    # r"STB_IC_L",
-    r"BLS_IC_XL",
-]
-fg_img_dirs_all_ic_xl = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_ic_xl]
+# fg_img_dirs_all_rc_s = [r"STB_RC_S", r"BLS_RC_S"]
+# fg_img_dirs_all_rc_s = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_rc_s]
+#
+# fg_img_dirs_all_rc_m = [
+#     r"STB_RC_M",
+#     r"BLS_RC_M",
+#     r"STB_LED_M",
+#     r"BLS_LED_M",
+# ]
+# fg_img_dirs_all_rc_m = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_rc_m]
+#
+# fg_img_dirs_all_rc_l = [
+#     r"STB_RC_L",
+#     r"BLS_RC_L",
+#     r"STB_LED_L",
+#     r"BLS_LED_L",
+# ]
+# fg_img_dirs_all_rc_l = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_rc_l]
+#
+# fg_img_dirs_all_sot_m = [
+#     r"STB_SOT_M",
+#     r"BLS_SOT_M",
+#     r"STB_8P4R_M",
+#     r"BLS_8P4R_M",
+# ]
+# fg_img_dirs_all_sot_m = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_sot_m]
+#
+# fg_img_dirs_all_sot_l = [
+#     r"STB_SOT_L",
+#     r"BLS_SOT_L",
+#     r"STB_8P4R_L",
+#     r"BLS_8P4R_L",
+# ]
+# fg_img_dirs_all_sot_l = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_sot_l]
+#
+# fg_img_dirs_all_sot_xl = [
+#     r"STB_SOT_XL",
+#     r"BLS_SOT_XL",
+# ]
+# fg_img_dirs_all_sot_xl = [
+#     os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_sot_xl
+# ]
+#
+# fg_img_dirs_all_ic_m = [
+#     # r"STB_IC_L",
+#     r"BLS_IC_M",
+# ]
+# fg_img_dirs_all_ic_m = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_ic_m]
+#
+# fg_img_dirs_all_ic_l = [
+#     # r"STB_IC_L",
+#     r"BLS_IC_L",
+# ]
+# fg_img_dirs_all_ic_l = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_ic_l]
+#
+# fg_img_dirs_all_ic_xl = [
+#     # r"STB_IC_L",
+#     r"BLS_IC_XL",
+# ]
+# fg_img_dirs_all_ic_xl = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_ic_xl]
 
 fg_img_dirs_chip_stb_all = [
     r"chip_stb",

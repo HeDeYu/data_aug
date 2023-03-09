@@ -747,6 +747,7 @@ class DataPackage:
 
             # 对源对象进行基本的增强操作
             assert isinstance(src_data_package, DataPackage)
+
             # 随机旋转90°整数倍
             rotate_degree = random.randint(0, 3)
             if rotate_degree != 0:
