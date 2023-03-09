@@ -3,11 +3,11 @@
 # @Author   :Deyu He
 # @Time     :2022/11/29 17:15
 
-
 import copy
 from pathlib import Path
 
 import cvutils
+import numpy as np
 import pyutils
 
 __all__ = [
@@ -21,7 +21,7 @@ __all__ = [
 class DataPackage:
     # 根据图像路径（仅有文件名字）与图像宽高生成默认的标注内容
     @classmethod
-    def gen_default_label(cls, img_path, shape):
+    def gen_default_label(cls, img_path, img_shape):
         return dict(
             # todo: remove the hard magic numbers below
             version="4.5.7",
@@ -29,9 +29,21 @@ class DataPackage:
             shapes=[],
             imagePath=img_path,
             imageData=None,
-            imageHeight=shape[0],
-            imageWidth=shape[1],
+            imageHeight=img_shape[0],
+            imageWidth=img_shape[1],
         )
+
+    # 根据图像路径生成默认图像，并使用默认标注内容，返回dp对象
+    @classmethod
+    def gen_default_data_package(cls, img_path, img_shape, img_val=0):
+        img_val = int(img_val)
+        if img_val < 0:
+            img_val = 0
+        elif img_val > 255:
+            img_val = 255
+        img = np.ones(shape=img_shape, dtype=np.uint8) * img_val
+        label = cls.gen_default_label(img_path, img_shape[:2])
+        return DataPackage(img_path, img, None, label)
 
     # 通过图像路径生成对象，其中标注路径与图像路径一致，仅替换后缀，仅适用与图像与标注放置在同一文件夹下的情况，若标注文件不存在，生成默认的标注内容
     @classmethod
