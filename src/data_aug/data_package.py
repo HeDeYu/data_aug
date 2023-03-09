@@ -20,9 +20,11 @@ __all__ = [
 # 重要的数据成员包括图像路径,图像,标注路径,标注内容
 # 提供常用的方法,包括生成默认,保存,裁剪
 class DataPackage:
-    # 根据图像路径（仅有文件名字）与图像宽高生成默认的标注内容
     @classmethod
     def gen_default_label(cls, img_path, img_shape):
+        """
+        根据图像路径（仅有文件名字）与图像宽高生成默认的标注内容
+        """
         return dict(
             # todo: remove the hard magic numbers below
             version="4.5.7",
@@ -34,9 +36,11 @@ class DataPackage:
             imageWidth=img_shape[1],
         )
 
-    # 根据图像路径生成默认图像，并使用默认标注内容，返回dp对象
     @classmethod
     def gen_default_data_package(cls, img_path, img_shape, img_val=0):
+        """
+        根据图像路径生成默认图像，并使用默认标注内容，返回dp对象
+        """
         img_val = int(img_val)
         if img_val < 0:
             img_val = 0
@@ -86,32 +90,39 @@ class DataPackage:
             label = cls.gen_default_label(img_path, img.shape)
         return cls(img_path, img, label_path, label, cat_idx)
 
-    # 通过标注路径生成对象，其中图像路径通过标注内容获取
     @classmethod
     def create_from_label_path(cls, label_path, cat_idx=-1):
+        """
+        类方法，通过标注路径生成对象，其中图像路径通过标注内容获取
+        """
+        assert label_path is not None
+        label_path = str(Path(label_path).absolute())
         label = pyutils.load_json(label_path)
         img_path = Path(label_path).parent / label["imagePath"]
         img = cvutils.imread(img_path)
+        img = img[:, :, :3]
         return cls(img_path, img, label_path, label, cat_idx)
 
-    # 初始化方法,由用户显式提供数据成员
     def __init__(self, img_path, img, label_path, label, cat_idx=-1):
+        """
+        初始化方法,由用户显式提供数据成员
+        """
+        if img_path is not None:
+            img_path = str(Path(img_path).absolute())
+        if label_path is not None:
+            label_path = str(Path(label_path).absolute())
+        self.img = img
         self.img_path = img_path
-        self.img = img.copy()
-        self.label_path = label_path
+        if label_path is not None:
+            self.label_path = label_path
+        else:
+            self.label_path = (
+                str(Path(img_path).with_suffix(".json"))
+                if img_path is not None
+                else None
+            )
         self.label = copy.deepcopy(label)
-        self.rectangle_items = []
         self.cat_idx = cat_idx
-        for shapes_item in self.label["shapes"]:
-            if shapes_item["shape_type"] == "rectangle":
-                self.rectangle_items.append(
-                    cvutils.RectROI.create_from_xyxy(
-                        shapes_item["points"][0][0],
-                        shapes_item["points"][0][1],
-                        shapes_item["points"][1][0],
-                        shapes_item["points"][1][1],
-                    )
-                )
 
     # 给定左上角坐标与宽高，裁剪图像与标注
     def crop(
