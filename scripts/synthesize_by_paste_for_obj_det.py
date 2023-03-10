@@ -84,14 +84,6 @@ fg_root = r"D:\data\fg"
 # ]
 # fg_img_dirs_all_ic_xl = [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_all_ic_xl]
 
-fg_img_dirs_chip_stb_all = [
-    r"chip_stb",
-    r"led_stb",
-]
-fg_img_dirs_chip_stb_all = [
-    os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_chip_stb_all
-]
-
 #
 # fg_img_dirs_stb_led_sot_8p4r_m = [
 #     r"STB_LED_M",
@@ -111,6 +103,14 @@ fg_img_dirs_chip_stb_all = [
 #     os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_bls_led_sot_8p4r_m
 # ]
 
+fg_img_dirs_chip_stb_all = [
+    r"chip_stb",
+    r"led_stb",
+]
+fg_img_dirs_chip_stb_all = [
+    os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_chip_stb_all
+]
+
 bg_root = r"D:\data\bg"
 bg_img_dirs = [
     r"stb_15um_white_bg",
@@ -119,28 +119,12 @@ bg_img_dirs = [
     r"stb_15um_blue_bg",
     r"stb_15um_black_bg",
     r"stb_15um_yellow_bg",
-    # r"syn_green_bg",
-    # r"real_xxum_green_bg",
-    # r"real_xxum_black_bg",
-    # r"CQHE_15um_green_bg",
-    # r"BLS_bg",
 ]
 bg_img_dirs = [os.path.join(bg_root, dir_) for dir_ in bg_img_dirs]
 
-# fg_dir, name, dst_size, num_to_gen
-# num_to_gen = 200
-# num_to_paste = 20
+# fg_dir, name, dst_size, num_to_gen, num_to_paste
 candidates = [
     [fg_img_dirs_chip_stb_all, "chip_stb_all", 640, 10, 20],
-    # [fg_img_dirs_all_rc_s, "ALL_RC_S", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_rc_m, "ALL_RC_M", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_sot_m, "ALL_SOT_M", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_ic_m, "ALL_IC_M", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_rc_l, "ALL_RC_L_s2", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_sot_l, "ALL_SOT_L_s2", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_ic_l, "ALL_IC_L_s2", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_sot_xl, "ALL_SOT_XL_s4", 480, num_to_gen, num_to_paste],
-    # [fg_img_dirs_all_ic_xl, "ALL_IC_XL_s4", 480, num_to_gen, num_to_paste],
 ]
 
 for fg_img_dirs, name, dst_size, num_to_gen, num_to_paste in candidates:  # type: ignore
