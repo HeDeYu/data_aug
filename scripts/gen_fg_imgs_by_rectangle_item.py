@@ -49,57 +49,55 @@ def filter_func_only_8p4r_with_pad(label_item):
     )
 
 
-# src_dirs = [
-#     # 标准测试版
-#     r"D:\data\AutoProgram\obj_det\raw\stb\stb_rc_15um_without_01005",
-#     r"D:\data\AutoProgram\obj_det\raw\stb\stb_led",
-#     r"D:\data\AutoProgram\obj_det\raw\stb\stb_sot",
-#     r"D:\data\AutoProgram\obj_det\raw\stb\stb_8p4r",
-# ]
-# dst_dirs = [
-#     r"D:\data\AutoProgram\obj_det\fg\STB_RC",
-#     r"D:\data\AutoProgram\obj_det\fg\STB_LED",
-#     r"D:\data\AutoProgram\obj_det\fg\STB_SOT",
-#     r"D:\data\AutoProgram\obj_det\fg\STB_8P4R",
-# ]
+# # 标准测试板普通rc元件
+# margin_tblr = [20, 20, 20, 20]
+# filter_func = filter_func_only_with_pad
+# crop_rectangle_items_for_folder(
+#     src_dir=r"D:\data\raw\stb\rc_stb_15um_without_01005",
+#     dst_dir=r"D:\data\fg\rc_stb",
+#     filter_func=filter_func,
+#     margin_tblr=margin_tblr,
+# )
+#
+# # 标准测试板led元件
+# margin_tblr = [20, 20, 20, 20]
+# filter_func = filter_func_only_with_pad
+# crop_rectangle_items_for_folder(
+#     src_dir=r"D:\data\raw\stb\led_stb",
+#     dst_dir=r"D:\data\fg\led_stb",
+#     filter_func=filter_func,
+#     margin_tblr=margin_tblr,
+# )
+#
+# # 标准测试板sot元件（不含sod）
+# margin_tblr = [20, 20, 20, 20]
+# filter_func = filter_func_only_with_pad
+# crop_rectangle_items_for_folder(
+#     src_dir=r"D:\data\raw\stb\sot_stb",
+#     dst_dir=r"D:\data\fg\sot_stb",
+#     filter_func=filter_func,
+#     margin_tblr=margin_tblr,
+# )
+#
+# # 标准测试板8p4r元件
+# margin_tblr = [20, 20, 20, 20]
+# filter_func = filter_func_only_with_pad
+# crop_rectangle_items_for_folder(
+#     src_dir=r"D:\data\raw\stb\8p4r_stb",
+#     dst_dir=r"D:\data\fg\8p4r_stb",
+#     filter_func=filter_func,
+#     margin_tblr=margin_tblr,
+# )
 
+# 贝莱胜板子
 margin_tblr = [20, 20, 20, 20]
 filter_func = filter_func_only_with_pad
 crop_rectangle_items_for_folder(
-    src_dir=r"D:\data\raw\chip_stb_15um_without_01005",
-    dst_dir=r"D:\data\fg\chip_stb",
+    src_dir=r"D:\data\raw\BeiLaiSheng",
+    dst_dir=r"D:\data\fg\all_bls",
     filter_func=filter_func,
     margin_tblr=margin_tblr,
 )
-
-margin_tblr = [20, 20, 20, 20]
-filter_func = filter_func_only_with_pad
-crop_rectangle_items_for_folder(
-    src_dir=r"D:\data\raw\led_stb",
-    dst_dir=r"D:\data\fg\led_stb",
-    filter_func=filter_func,
-    margin_tblr=margin_tblr,
-)
-
-
-margin_tblr = [20, 20, 20, 20]
-filter_func = filter_func_only_with_pad
-crop_rectangle_items_for_folder(
-    src_dir=r"D:\data\raw\sot_stb",
-    dst_dir=r"D:\data\fg\sot_stb",
-    filter_func=filter_func,
-    margin_tblr=margin_tblr,
-)
-
-margin_tblr = [20, 20, 20, 20]
-filter_func = filter_func_only_with_pad
-crop_rectangle_items_for_folder(
-    src_dir=r"D:\data\raw\8p4r_stb",
-    dst_dir=r"D:\data\fg\8p4r_stb",
-    filter_func=filter_func,
-    margin_tblr=margin_tblr,
-)
-
 #
 # crop_rectangle_items_for_folder(
 #         src_dir=r"D:\data\AutoProgram\obj_det\raw\stb\stb_led",
