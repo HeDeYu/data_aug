@@ -243,6 +243,11 @@ class DataPackage:
             ret_dp.label_items.append(self.resize_label_item(label_item, fx, fy))
         return ret_dp
 
+    def resize(self, dst_size, interpolation=1):
+        fx = dst_size / self.img.shape[1]
+        fy = dst_size / self.img.shape[0]
+        return self.resize_by_factor(fx, fy, interpolation)
+
     def rotate_by_multi_90(self, rotate_degree):
         """
         将执行对象旋转-90, 90，180或270度，返回新创建的旋转后的DataPackage对象
