@@ -104,7 +104,7 @@ fg_root = r"D:\data\fg"
 # ]
 
 fg_img_dirs_chip_stb_all = [
-    r"chip_stb",
+    r"rc_stb",
     r"led_stb",
 ]
 fg_img_dirs_chip_stb_all = [
@@ -124,7 +124,7 @@ bg_img_dirs = [os.path.join(bg_root, dir_) for dir_ in bg_img_dirs]
 
 # fg_dir, name, dst_size, num_to_gen, num_to_paste
 candidates = [
-    [fg_img_dirs_chip_stb_all, "chip_stb_all", 640, 10, 20],
+    [fg_img_dirs_chip_stb_all, "chip_stb_all", 480, 10, 20],
 ]
 
 for fg_img_dirs, name, dst_size, num_to_gen, num_to_paste in candidates:  # type: ignore

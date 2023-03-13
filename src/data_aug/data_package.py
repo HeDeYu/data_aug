@@ -244,8 +244,8 @@ class DataPackage:
         return ret_dp
 
     def resize(self, dst_size, interpolation=1):
-        fx = dst_size / self.img.shape[1]
-        fy = dst_size / self.img.shape[0]
+        fx = dst_size[0] / self.img.shape[1]
+        fy = dst_size[1] / self.img.shape[0]
         return self.resize_by_factor(fx, fy, interpolation)
 
     def rotate_by_multi_90(self, rotate_degree):
@@ -761,15 +761,17 @@ class DataPackage:
                 )
 
             # 均匀分布方式在某个区间内生成缩放系数
-            stride = 1.0
-            scale_range = [0.9 / stride, 1.0 / stride]
-            scale_x = (
-                random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
-            )
-            scale_y = (
-                random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
-            )
-            src_data_package = src_data_package.resize_by_factor(fx=scale_x, fy=scale_y)
+            # stride = 1.0
+            # scale_range = [0.9 / stride, 1.0 / stride]
+            # scale_x = (
+            #     random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
+            # )
+            # scale_y = (
+            #     random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
+            # )
+            # src_data_package = src_data_package.resize_by_factor(fx=scale_x, fy=scale_y)
+            _dst_size = [240, 240]
+            src_data_package = src_data_package.resize(_dst_size)
 
             if allow_overlap:
                 # 在合法区域内随机生成粘贴位置左上角坐标
