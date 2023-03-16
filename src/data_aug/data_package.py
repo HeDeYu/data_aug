@@ -6,6 +6,8 @@
 import copy
 import datetime
 import itertools
+
+# import os
 import random
 from pathlib import Path
 
@@ -257,7 +259,9 @@ class DataPackage:
         Returns:
 
         """
-        assert rotate_degree in [90, 180, 270, -90]
+        assert rotate_degree in [0, 90, 180, 270, -90]
+        if rotate_degree == 0:
+            return self.copy()
         if rotate_degree == -90:
             rotate_degree = 270
         if rotate_degree == 90:
@@ -445,6 +449,21 @@ class DataPackage:
             pass
 
         return DataPackage(img_path, img, label_path, label_, cat_idx)
+
+    def random_crop(self, dst_size):
+        assert self.img.shape[0] > dst_size[0] and self.img.shape[1] > dst_size[1]
+        tl_x = random.randint(0, self.img.shape[1] - dst_size[1] - 1)
+        tl_y = random.randint(0, self.img.shape[0] - dst_size[0] - 1)
+        # todo: 若bg图的尺寸小于目标尺寸，执行pad操作
+        ret = self.crop(
+            tl_x,
+            tl_y,
+            tl_x + dst_size[1] - 1,
+            tl_y + dst_size[0] - 1,
+            img_path=self.img_path,
+            append_coords_to_file_name=True,
+        )
+        return ret
 
     def crop_rectangle_item(
         self, rectangle_item, margin_tblr=None, img_path=None, cat_idx=-1
@@ -723,6 +742,9 @@ class DataPackage:
         num_max_try=1,
         overlap_margin=0,
         in_place=False,
+        first_size=None,
+        max_size=None,
+        min_size=None,
     ):
         """
         给定源对象迭代器，粘贴次数，是否允许重叠，不允许重叠时单个源对象的最大尝试粘贴次数，判断是否重合时的余量，将源对象粘贴到执行对象，
@@ -761,17 +783,36 @@ class DataPackage:
                 )
 
             # 均匀分布方式在某个区间内生成缩放系数
-            # stride = 1.0
-            # scale_range = [0.9 / stride, 1.0 / stride]
-            # scale_x = (
-            #     random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
-            # )
-            # scale_y = (
-            #     random.random() * (scale_range[1] - scale_range[0]) + scale_range[0]
-            # )
-            # src_data_package = src_data_package.resize_by_factor(fx=scale_x, fy=scale_y)
-            _dst_size = [240, 240]
-            src_data_package = src_data_package.resize(_dst_size)
+            if not num_pasted and first_size is not None:
+                first_scale = first_size / max(
+                    src_data_package.img.shape[0], src_data_package.img.shape[1]
+                )
+                scale_range = [0.95 * first_scale, 1.0 * first_scale]
+                r = random.random()
+                scale_x = r * (scale_range[1] - scale_range[0]) + scale_range[0]
+                scale_y = r * (scale_range[1] - scale_range[0]) + scale_range[0]
+            else:
+                if max_size is not None:
+                    max_scale = max_size / max(
+                        src_data_package.img.shape[0], src_data_package.img.shape[1]
+                    )
+                else:
+                    max_scale = 1.0
+                if min_size is not None:
+                    min_scale = min_size / max(
+                        src_data_package.img.shape[0], src_data_package.img.shape[1]
+                    )
+                else:
+                    min_scale = 0.9
+                if max_scale < min_scale:
+                    min_scale = max_scale * 0.9
+                scale_range = [min_scale, max_scale]
+                r = random.random()
+                rx = random.random() * 0.05
+                ry = random.random() * 0.05
+                scale_x = (r + rx) * (scale_range[1] - scale_range[0]) + scale_range[0]
+                scale_y = (r + ry) * (scale_range[1] - scale_range[0]) + scale_range[0]
+            src_data_package = src_data_package.resize_by_factor(fx=scale_x, fy=scale_y)
 
             if allow_overlap:
                 # 在合法区域内随机生成粘贴位置左上角坐标
@@ -842,7 +883,14 @@ class DataPackage:
 
     @classmethod
     def mosaic_mxn(
-        cls, data_package_list, dst_size, m=2, n=2, img_path=None, jitter=0, img_val=0
+        cls,
+        data_package_list,
+        dst_size,
+        m=2,
+        n=2,
+        img_path=None,
+        jitter=None,
+        img_val=0,
     ):
         """
         给定待拼接的DataPackage对象序列，目标尺寸，以及拼接块的行列数字，生成对象的img_path成员数据，预设像素值
@@ -859,6 +907,8 @@ class DataPackage:
 
         """
         # 给定的待拼接对象数量应不大于m*n
+        if jitter is None:
+            jitter = [0, 0]
         assert len(data_package_list) <= m * n
         # 创建目标尺寸的dp
         width, height = dst_size
@@ -1016,6 +1066,9 @@ def paste_by_iter_for_folder(
     allow_overlap=False,
     num_max_try=1,
     overlap_margin=0,
+    first_size=None,
+    max_size=None,
+    min_size=None,
 ):
     """
     用户给定前景文件夹，背景文件夹，图像后缀，输出目标文件夹，生成图像的尺寸，以及DataPackage类的paste_by_iter方法所需的其他参数，
@@ -1040,6 +1093,8 @@ def paste_by_iter_for_folder(
     fg_data_package_list = gen_data_package_list_from_img_file_for_folder(
         fg_dir, suffix_patterns
     )
+    for dp in fg_data_package_list:
+        logger.debug(dp.img_path)
     bg_data_package_list = gen_data_package_list_from_img_file_for_folder(
         bg_dir, suffix_patterns
     )
@@ -1078,6 +1133,9 @@ def paste_by_iter_for_folder(
             num_max_try=num_max_try,
             overlap_margin=overlap_margin,
             in_place=False,
+            first_size=first_size,
+            max_size=max_size,
+            min_size=min_size,
         )
         # 更新生成的dp对象的路径信息,保存生成的dp对象
         ret_img_path = pyutils.replace_parent(
@@ -1089,6 +1147,101 @@ def paste_by_iter_for_folder(
         )
         ret.update_img_path(ret_img_path)
         ret.save()
+
+
+def mosaic_mxn_online(
+    bg_img_dirs_for_paste,
+    fg_img_dir_ll,
+    bg_img_dirs_for_mosaic,
+    dst_size,
+    block_size,
+    m,
+    n,
+    num_to_gen,
+    dst_dir,
+    suffix_patterns,
+    num_to_paste_for_block=1,
+    max_size_list=None,
+    min_size_list=None,
+):
+    if min_size_list is not None:
+        assert len(fg_img_dir_ll) == len(min_size_list)
+    else:
+        min_size_list = [None] * len(fg_img_dir_ll)
+    if max_size_list is not None:
+        assert len(fg_img_dir_ll) == len(max_size_list)
+    else:
+        max_size_list = [None] * len(fg_img_dir_ll)
+    bg_data_package_list = gen_data_package_list_from_img_file_for_folder(
+        bg_img_dirs_for_paste, suffix_patterns
+    )
+
+    bg_data_package_list2 = gen_data_package_list_from_img_file_for_folder(
+        bg_img_dirs_for_mosaic, suffix_patterns
+    )
+    # for bg_dp in bg_data_package_list:
+    #     logger.debug(bg_dp.img_path)
+    bg_dp_cyclic_iter = pyutils.make_cyclic_iterator(bg_data_package_list)
+    bg_dp_cyclic_iter2 = pyutils.make_cyclic_iterator(bg_data_package_list2)
+    fg_dp_ll = [
+        gen_data_package_list_from_label_file_for_folder(fg_img_dirs)
+        for fg_img_dirs in fg_img_dir_ll
+    ]
+    num_fg_cls = len(fg_dp_ll)
+    fg_cyclic_iter_list = [
+        pyutils.make_cyclic_iterator(fg_dp_l) for fg_dp_l in fg_dp_ll
+    ]
+    fg_iter_idx_generator = pyutils.make_cyclic_iterator(range(num_fg_cls + 1))
+    for _ in tqdm(
+        range(num_to_gen), desc=f"mosaic images (num to gen = {num_to_gen}): "
+    ):
+        ingredient_dp_list = []
+        for _ in range(m * n):
+            fg_iter_idx = next(fg_iter_idx_generator)
+            if fg_iter_idx == num_fg_cls:
+                ingredient_dp_list.append(
+                    next(bg_dp_cyclic_iter2).random_crop(block_size)
+                )
+            else:
+                bg_dp = next(bg_dp_cyclic_iter).random_crop(block_size)
+                assert isinstance(bg_dp, DataPackage)
+                first_size = random.randint(200, 240)
+                max_size = min(block_size[0] - first_size, block_size[1] - first_size)
+                ret = bg_dp.paste_by_iter(
+                    fg_cyclic_iter_list[fg_iter_idx],
+                    num_to_paste_for_block,
+                    allow_overlap=False,
+                    first_size=first_size,
+                    max_size=max_size,
+                    min_size=min_size_list[fg_iter_idx],
+                    num_max_try=20,
+                )
+
+                ingredient_dp_list.append(ret)
+        dp_height, dp_width = ingredient_dp_list[0].img.shape[:2]
+        jitter_x = (dst_size[0] - (dp_width * n)) // n
+        jitter_y = (dst_size[1] - (dp_height * m)) // m
+
+        ret = DataPackage.mosaic_mxn(
+            ingredient_dp_list,
+            dst_size,
+            jitter=[jitter_x, jitter_y],
+            m=m,
+            n=n,
+            img_val=np.random.randint(0, 256),
+        )
+
+        ret.update_img_path(
+            Path(dst_dir)
+            / (datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".bmp")
+        )
+        # ret.visualize()
+        save_success = ret.save()
+        import time
+
+        time.sleep(0.1)
+        if not save_success:
+            logger.info(f"{ret.img_path}, {ret.label_path}")
 
 
 def mosaic_mxn_for_folder(

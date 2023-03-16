@@ -5,11 +5,9 @@
 
 import os
 
-from loguru import logger
+from data_aug.data_package import mosaic_mxn_online
 
-from data_aug.data_package import paste_by_iter_for_folder
-
-fg_root = r"D:\data\fg"
+fg_root = r"D:\data\obj_det\fg"
 
 # fg_img_dirs_all_all_l = [
 #     r"STB_RC_L",
@@ -103,47 +101,98 @@ fg_root = r"D:\data\fg"
 #     os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_bls_led_sot_8p4r_m
 # ]
 
-fg_img_dirs_chip_stb_all = [
-    r"rc_stb",
-    r"led_stb",
-]
-fg_img_dirs_chip_stb_all = [
-    os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_chip_stb_all
-]
 
-bg_root = r"D:\data\bg"
+# fg_img_dirs_sot_stb = [
+#     os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_sot_stb
+# ]
+
+# bg_root = r"D:\data\obj_det\bg"
+# bg_img_dirs = [
+#     r"stb_15um_white_bg",
+#     r"stb_15um_green_bg",
+#     r"stb_15um_red_bg",
+#     r"stb_15um_blue_bg",
+#     r"stb_15um_black_bg",
+#     r"stb_15um_yellow_bg",
+# ]
+# bg_img_dirs = [os.path.join(bg_root, dir_) for dir_ in bg_img_dirs]
+
+# fg_dir, name, dst_size, num_to_gen, num_to_paste
+# candidates = [
+#     [fg_img_dirs_sot_stb, "sot_stb", 480, 6, 1],
+# ]
+
+# for first_size in np.linspace(480, 240, 13):
+#     for fg_img_dirs, name, dst_size, num_to_gen, num_to_paste in candidates:  # type: ignore
+#         dst_dir = rf"D:\data\obj_det\synthesize_by_paste\{name}_{str(dst_size)}"
+#         logger.info("fg_img_dirs:")
+#         logger.info(fg_img_dirs)
+#         logger.info("bg_img_dirs:")
+#         logger.info(bg_img_dirs)
+#         logger.info("dst_dir:")
+#         logger.info(dst_dir)
+#         paste_by_iter_for_folder(
+#             fg_dir=fg_img_dirs,
+#             bg_dir=bg_img_dirs,
+#             dst_dir=dst_dir,
+#             suffix_patterns=["*.bmp"],
+#             dst_size=[dst_size, dst_size],
+#             num_to_gen=num_to_gen,
+#             num_to_paste=num_to_paste,
+#             allow_overlap=False,
+#             num_max_try=20,
+#             overlap_margin=5,
+#             first_size=first_size,
+#             max_size=None,
+#             min_size=None,
+#         )
+
+bg_paste_root = r"D:\data\obj_det\bg"
 bg_img_dirs = [
     r"stb_15um_white_bg",
     r"stb_15um_green_bg",
-    r"stb_15um_red_bg",
+    # r"stb_15um_red_bg",
     r"stb_15um_blue_bg",
     r"stb_15um_black_bg",
+    # r"stb_15um_yellow_bg",
+]
+bg_img_dirs_for_paste = [os.path.join(bg_paste_root, dir_) for dir_ in bg_img_dirs]
+
+fg_img_dirs_sot_stb = [r"sot_stb"]
+fg_img_dirs_led_stb = [r"led_stb"]
+fg_img_dirs_rc_stb = [r"rc_stb"]
+
+fg_img_dir_ll = [
+    [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_rc_stb],
+    [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_led_stb],
+    [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_sot_stb],
+]
+
+max_size_list = [200, 200, 120]
+min_size_list = [None, None, None]
+
+bg_mosaic_root = r"D:\data\obj_det\bg"
+bg_img_dirs_for_mosaic = [
+    r"stb_15um_red_bg",
     r"stb_15um_yellow_bg",
 ]
-bg_img_dirs = [os.path.join(bg_root, dir_) for dir_ in bg_img_dirs]
-
-# fg_dir, name, dst_size, num_to_gen, num_to_paste
-candidates = [
-    [fg_img_dirs_chip_stb_all, "chip_stb_all", 480, 10, 20],
+bg_img_dirs_for_mosaic = [
+    os.path.join(bg_mosaic_root, dir_) for dir_ in bg_img_dirs_for_mosaic
 ]
 
-for fg_img_dirs, name, dst_size, num_to_gen, num_to_paste in candidates:  # type: ignore
-    dst_dir = rf"D:\data\synthesize_by_paste\{name}_{str(dst_size)}"
-    logger.info("fg_img_dirs:")
-    logger.info(fg_img_dirs)
-    logger.info("bg_img_dirs:")
-    logger.info(bg_img_dirs)
-    logger.info("dst_dir:")
-    logger.info(dst_dir)
-    paste_by_iter_for_folder(
-        fg_dir=fg_img_dirs,
-        bg_dir=bg_img_dirs,
-        dst_dir=dst_dir,
-        suffix_patterns=["*.bmp"],
-        dst_size=[dst_size, dst_size],
-        num_to_gen=num_to_gen,
-        num_to_paste=num_to_paste,
-        allow_overlap=False,
-        num_max_try=20,
-        overlap_margin=0,
-    )
+
+mosaic_mxn_online(
+    bg_img_dirs_for_paste,
+    fg_img_dir_ll,
+    bg_img_dirs_for_mosaic,
+    [996, 996],
+    [320, 320],
+    3,
+    3,
+    30,
+    r"D:\data\obj_det\temp2",
+    "*.bmp",
+    num_to_paste_for_block=20,
+    max_size_list=max_size_list,
+    min_size_list=min_size_list,
+)
