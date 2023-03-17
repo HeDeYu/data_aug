@@ -151,30 +151,31 @@ bg_paste_root = r"D:\data\obj_det\bg"
 bg_img_dirs = [
     r"stb_15um_white_bg",
     r"stb_15um_green_bg",
-    # r"stb_15um_red_bg",
+    r"stb_15um_red_bg",
     r"stb_15um_blue_bg",
     r"stb_15um_black_bg",
-    # r"stb_15um_yellow_bg",
+    r"stb_15um_yellow_bg",
 ]
 bg_img_dirs_for_paste = [os.path.join(bg_paste_root, dir_) for dir_ in bg_img_dirs]
 
-fg_img_dirs_sot_stb = [r"sot_stb"]
-fg_img_dirs_led_stb = [r"led_stb"]
 fg_img_dirs_rc_stb = [r"rc_stb"]
+fg_img_dirs_led_stb = [r"led_stb"]
+fg_img_dirs_8p4r_stb = [r"8p4r_stb"]
+fg_img_dirs_sot_stb = [r"sot_stb"]
+fg_img_dirs_ic_stb = [r"ic_stb"]
 
 fg_img_dir_ll = [
     [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_rc_stb],
     [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_led_stb],
+    [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_8p4r_stb],
     [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_sot_stb],
+    [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_ic_stb],
 ]
+min_size_list = [None, None, 32, 32, 32]
 
-max_size_list = [200, 200, 120]
-min_size_list = [None, None, None]
-
-bg_mosaic_root = r"D:\data\obj_det\bg"
+bg_mosaic_root = r"D:\data\obj_det\bg_for_mosaic"
 bg_img_dirs_for_mosaic = [
-    r"stb_15um_red_bg",
-    r"stb_15um_yellow_bg",
+    "bls_bg",
 ]
 bg_img_dirs_for_mosaic = [
     os.path.join(bg_mosaic_root, dir_) for dir_ in bg_img_dirs_for_mosaic
@@ -185,14 +186,14 @@ mosaic_mxn_online(
     bg_img_dirs_for_paste,
     fg_img_dir_ll,
     bg_img_dirs_for_mosaic,
-    [996, 996],
-    [320, 320],
-    3,
-    3,
+    [1024, 1024],
+    [256, 256],
+    4,
+    4,
     30,
     r"D:\data\obj_det\temp2",
     "*.bmp",
     num_to_paste_for_block=20,
-    max_size_list=max_size_list,
-    min_size_list=min_size_list,
+    # max_size_list=max_size_list,
+    # min_size_list=min_size_list,
 )

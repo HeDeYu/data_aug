@@ -4,9 +4,9 @@ from loguru import logger
 
 from data_aug.data_package import gen_data_package_list_from_label_file_for_folder
 
-src_dir = r"D:\data\fg\all_bls"
+src_dir = r"D:\data\obj_det\fg\all_bls"
 
-dst_root_ = r"D:\data\fg"
+dst_root_ = r"D:\data\obj_det\fg"
 
 senario = "bls"
 

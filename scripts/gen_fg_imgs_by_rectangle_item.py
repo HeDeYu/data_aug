@@ -51,7 +51,7 @@ def filter_func_only_8p4r_with_pad(label_item):
 
 src_dir_root = r"D:\data\obj_det\raw"
 dst_dir_root = r"D:\data\obj_det\fg"
-default_margin_tblr = [10, 10, 10, 10]
+default_margin_tblr = [5, 5, 5, 5]
 
 # 标准测试板普通rc元件，15u，排除01005
 margin_tblr = default_margin_tblr
@@ -73,6 +73,16 @@ crop_rectangle_items_for_folder(
     margin_tblr=margin_tblr,
 )
 
+# 标准测试板8p4r元件，15u
+margin_tblr = default_margin_tblr
+filter_func = filter_func_only_with_pad
+crop_rectangle_items_for_folder(
+    src_dir=src_dir_root + r"\stb\8p4r_stb",
+    dst_dir=dst_dir_root + r"\8p4r_stb",
+    filter_func=filter_func,
+    margin_tblr=margin_tblr,
+)
+
 # 标准测试板sot元件（不含sod），15u
 margin_tblr = default_margin_tblr
 filter_func = filter_func_only_with_pad
@@ -83,12 +93,12 @@ crop_rectangle_items_for_folder(
     margin_tblr=margin_tblr,
 )
 
-# 标准测试板8p4r元件，15u
+# 标准测试板ic元件，15u
 margin_tblr = default_margin_tblr
 filter_func = filter_func_only_with_pad
 crop_rectangle_items_for_folder(
-    src_dir=src_dir_root + r"\stb\8p4r_stb",
-    dst_dir=dst_dir_root + r"\8p4r_stb",
+    src_dir=src_dir_root + r"\stb\ic_stb",
+    dst_dir=dst_dir_root + r"\ic_stb",
     filter_func=filter_func,
     margin_tblr=margin_tblr,
 )

@@ -349,6 +349,12 @@ class DataPackage:
         else:
             raise NotImplementedError
 
+    def pad_to_square(self):
+        if self.img.shape[0] == self.img.shape[1]:
+            return self.copy()
+        dst_edge = max(self.img.shape[0], self.img.shape[1])
+        return self.pad_with_dst_size(dst_size=[dst_edge, dst_edge])
+
     def crop(
         self,
         tl_x,
@@ -451,6 +457,8 @@ class DataPackage:
         return DataPackage(img_path, img, label_path, label_, cat_idx)
 
     def random_crop(self, dst_size):
+        if self.img.shape[0] == dst_size[0] and self.img.shape[1] == dst_size[1]:
+            return self.copy()
         assert self.img.shape[0] > dst_size[0] and self.img.shape[1] > dst_size[1]
         tl_x = random.randint(0, self.img.shape[1] - dst_size[1] - 1)
         tl_y = random.randint(0, self.img.shape[0] - dst_size[0] - 1)
@@ -804,14 +812,14 @@ class DataPackage:
                     )
                 else:
                     min_scale = 0.9
-                if max_scale < min_scale:
-                    min_scale = max_scale * 0.9
+                assert max_scale > min_scale
                 scale_range = [min_scale, max_scale]
                 r = random.random()
                 rx = random.random() * 0.05
                 ry = random.random() * 0.05
                 scale_x = (r + rx) * (scale_range[1] - scale_range[0]) + scale_range[0]
                 scale_y = (r + ry) * (scale_range[1] - scale_range[0]) + scale_range[0]
+            # logger.debug(f"{scale_x}, {scale_y}")
             src_data_package = src_data_package.resize_by_factor(fx=scale_x, fy=scale_y)
 
             if allow_overlap:
@@ -1199,23 +1207,44 @@ def mosaic_mxn_online(
         for _ in range(m * n):
             fg_iter_idx = next(fg_iter_idx_generator)
             if fg_iter_idx == num_fg_cls:
-                ingredient_dp_list.append(
-                    next(bg_dp_cyclic_iter2).random_crop(block_size)
-                )
+                bg_dp = next(bg_dp_cyclic_iter2)
+                assert isinstance(bg_dp, DataPackage)
+                bg_dp = bg_dp.pad_to_square()
+                src_size = bg_dp.img.shape[0]
+                if src_size < block_size[0]:
+                    bg_dp = bg_dp.pad_with_dst_size(dst_size=block_size)
+                else:
+                    dst_size_ = random.randint(block_size[0] // 2, src_size)
+                    bg_dp = bg_dp.resize(dst_size=[dst_size_, dst_size_])
+                    if dst_size_ < block_size[0]:
+                        bg_dp = bg_dp.pad_with_dst_size(dst_size=block_size)
+                ret = bg_dp.random_crop(block_size)
+                ingredient_dp_list.append(ret)
             else:
                 bg_dp = next(bg_dp_cyclic_iter).random_crop(block_size)
                 assert isinstance(bg_dp, DataPackage)
-                first_size = random.randint(200, 240)
-                max_size = min(block_size[0] - first_size, block_size[1] - first_size)
-                ret = bg_dp.paste_by_iter(
-                    fg_cyclic_iter_list[fg_iter_idx],
-                    num_to_paste_for_block,
-                    allow_overlap=False,
-                    first_size=first_size,
-                    max_size=max_size,
-                    min_size=min_size_list[fg_iter_idx],
-                    num_max_try=20,
-                )
+                choice = random.randint(0, 2)
+                # logger.info(f"choice: {choice}")
+                if choice == 0:
+                    ret = bg_dp.paste_by_iter(
+                        fg_cyclic_iter_list[fg_iter_idx],
+                        1,
+                        allow_overlap=False,
+                        first_size=random.randint(192, 256),
+                        max_size=None,
+                        min_size=None,
+                        num_max_try=1,
+                    )
+                else:
+                    ret = bg_dp.paste_by_iter(
+                        fg_cyclic_iter_list[fg_iter_idx],
+                        num_to_paste_for_block,
+                        allow_overlap=False,
+                        first_size=None,
+                        max_size=192,
+                        min_size=32,
+                        num_max_try=20,
+                    )
 
                 ingredient_dp_list.append(ret)
         dp_height, dp_width = ingredient_dp_list[0].img.shape[:2]
