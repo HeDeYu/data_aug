@@ -171,7 +171,7 @@ fg_img_dir_ll = [
     [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_sot_stb],
     [os.path.join(fg_root, dir_) for dir_ in fg_img_dirs_ic_stb],
 ]
-min_size_list = [None, None, 32, 32, 32]
+min_size_list = [None, None, 32, 32, 64]
 
 bg_mosaic_root = r"D:\data\obj_det\bg_for_mosaic"
 bg_img_dirs_for_mosaic = [
@@ -191,7 +191,7 @@ mosaic_mxn_online(
     4,
     4,
     30,
-    r"D:\data\obj_det\temp2",
+    r"D:\data\obj_det\temp",
     "*.bmp",
     num_to_paste_for_block=20,
     # max_size_list=max_size_list,

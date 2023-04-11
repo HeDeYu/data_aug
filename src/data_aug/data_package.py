@@ -1157,7 +1157,7 @@ def paste_by_iter_for_folder(
         ret.save()
 
 
-def mosaic_mxn_online(
+def synthesize_e2e_mxn_online(
     bg_img_dirs_for_paste,
     fg_img_dir_ll,
     bg_img_dirs_for_mosaic,
@@ -1171,6 +1171,7 @@ def mosaic_mxn_online(
     num_to_paste_for_block=1,
     max_size_list=None,
     min_size_list=None,
+    num_bg_for_mosaic=1,
 ):
     if min_size_list is not None:
         assert len(fg_img_dir_ll) == len(min_size_list)
@@ -1189,7 +1190,9 @@ def mosaic_mxn_online(
     )
     # for bg_dp in bg_data_package_list:
     #     logger.debug(bg_dp.img_path)
+    # bg_dp_cyclic_iter用于给出bg图片，并贴上fg
     bg_dp_cyclic_iter = pyutils.make_cyclic_iterator(bg_data_package_list)
+    # bg_dp_cyclic_iter2用于给出bg图片，直接用于mosaic
     bg_dp_cyclic_iter2 = pyutils.make_cyclic_iterator(bg_data_package_list2)
     fg_dp_ll = [
         gen_data_package_list_from_label_file_for_folder(fg_img_dirs)
@@ -1199,27 +1202,37 @@ def mosaic_mxn_online(
     fg_cyclic_iter_list = [
         pyutils.make_cyclic_iterator(fg_dp_l) for fg_dp_l in fg_dp_ll
     ]
-    fg_iter_idx_generator = pyutils.make_cyclic_iterator(range(num_fg_cls + 1))
+
+    # +num_bg_for_mosaic给纯bg图片
+    fg_iter_idx_generator = pyutils.make_cyclic_iterator(
+        range(num_fg_cls + num_bg_for_mosaic)
+    )
     for _ in tqdm(
         range(num_to_gen), desc=f"mosaic images (num to gen = {num_to_gen}): "
     ):
         ingredient_dp_list = []
         for _ in range(m * n):
             fg_iter_idx = next(fg_iter_idx_generator)
-            if fg_iter_idx == num_fg_cls:
+            # 纯bg作为mosaic场合
+            if fg_iter_idx >= num_fg_cls:
                 bg_dp = next(bg_dp_cyclic_iter2)
                 assert isinstance(bg_dp, DataPackage)
+                # 先补全为正方形图像
                 bg_dp = bg_dp.pad_to_square()
                 src_size = bg_dp.img.shape[0]
+                # 若源尺寸小于目标尺寸，直接居中补齐到目标尺寸
                 if src_size < block_size[0]:
                     bg_dp = bg_dp.pad_with_dst_size(dst_size=block_size)
+                # 否则取目标尺寸/2到源尺寸中的随机尺寸，缩放到随机尺寸，若随机尺寸小于目标尺寸，再次居中补齐
                 else:
                     dst_size_ = random.randint(block_size[0] // 2, src_size)
                     bg_dp = bg_dp.resize(dst_size=[dst_size_, dst_size_])
                     if dst_size_ < block_size[0]:
                         bg_dp = bg_dp.pad_with_dst_size(dst_size=block_size)
+                # 实际上仅对上述else分支中的dst_size_>=block_size[0]起到crop作用
                 ret = bg_dp.random_crop(block_size)
                 ingredient_dp_list.append(ret)
+            # 从bg图中粘贴fg后作为mosaic
             else:
                 bg_dp = next(bg_dp_cyclic_iter).random_crop(block_size)
                 assert isinstance(bg_dp, DataPackage)
@@ -1236,13 +1249,14 @@ def mosaic_mxn_online(
                         num_max_try=1,
                     )
                 else:
+                    min_size = min_size_list[fg_iter_idx]
                     ret = bg_dp.paste_by_iter(
                         fg_cyclic_iter_list[fg_iter_idx],
                         num_to_paste_for_block,
                         allow_overlap=False,
                         first_size=None,
                         max_size=192,
-                        min_size=32,
+                        min_size=min_size,
                         num_max_try=20,
                     )
 

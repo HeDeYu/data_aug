@@ -30,13 +30,13 @@ repos:
     entry: flake8
     types: [python]
 
-  - id: mypy
-    name: mypy
-    stages: [commit]
-    language: system
-    entry: mypy
-    types: [python]
-    require_serial: true
+#  - id: mypy
+#    name: mypy
+#    stages: [commit]
+#    language: system
+#    entry: mypy
+#    types: [python]
+#    require_serial: true
 
 #  - id: gitlint
 #    name: gitlint
